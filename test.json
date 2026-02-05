@@ -67,9 +67,12 @@
 },
 
 "Lender red flag":{
-    "question":["Question 1","Question 2"]
+    "question":["Question 1","Question 2"],
+    "answer":["Answer 1","Answer 2"]
 },
 
 "Company red flag":{ 
-    "question":["Question 1","Question 2"]}   
+    "question":["Question 1","Question 2"],
+    "answer":["Answer 1","Answer 2"]
+}   
 }

@@ -73,12 +73,13 @@ function extractQuestionAnswerPairs(
     ? a
         .filter((x): x is string => typeof x === "string")
         .map((s) => s.trim())
+        .map((s) => s || undefined) // Convert empty strings to undefined
     : [];
 
   if (questions.length === 0) return null;
   return questions.map((question, idx) => ({
     question,
-    answer: answers[idx],
+    answer: answers[idx], // Will be undefined if not present or empty
   }));
 }
 
@@ -319,7 +320,7 @@ function QuestionCard({
         </div>
       )}
 
-      {/* Expanded Content - AI Insight Only */}
+      {/* Expanded Content - Answer and AI Insight */}
       {isExpanded && (
         <div className="border-t border-border px-5 pb-5 pt-4">
           {question.answer ? (
@@ -334,7 +335,13 @@ function QuestionCard({
                 </p>
               </div>
             </>
-          ) : null}
+          ) : (
+            <div className="rounded-lg border border-muted/20 bg-muted/5 p-4">
+              <p className="text-sm text-muted-foreground italic">
+                No answer available for this question.
+              </p>
+            </div>
+          )}
 
           {question.aiInsight ? (
             <>

@@ -59,10 +59,10 @@ interface Rule {
 interface RiskInsight {
   factPattern: {
     facts: { label: string; value: string }[];
-    observations: string[];
+    observations: string[] | string;
   };
-  lenderJustification: string[];
-  finalConclusion: string[];
+  lenderJustification: string[] | string;
+  finalConclusion: string[] | string;
 }
 
 interface ComparisonData {
@@ -1965,6 +1965,25 @@ function RuleCard({
 }
 
 function RiskInsightPanel({ insight, onClose }: { insight: RiskInsight; onClose: () => void }) {
+  // Normalize arrays/strings from test.json - handle both formats
+  const factPatternText = Array.isArray(insight.factPattern.observations) && insight.factPattern.observations.length > 0
+    ? insight.factPattern.observations.join(" ")
+    : typeof insight.factPattern.observations === "string"
+      ? insight.factPattern.observations
+      : "";
+  
+  const lenderJustificationText = Array.isArray(insight.lenderJustification) && insight.lenderJustification.length > 0
+    ? insight.lenderJustification.join(" ")
+    : typeof insight.lenderJustification === "string"
+      ? insight.lenderJustification
+      : "";
+  
+  const finalConclusionText = Array.isArray(insight.finalConclusion) && insight.finalConclusion.length > 0
+    ? insight.finalConclusion.join(" ")
+    : typeof insight.finalConclusion === "string"
+      ? insight.finalConclusion
+      : "";
+
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
       <div className="mb-4 flex items-center justify-between">
@@ -1986,20 +2005,22 @@ function RiskInsightPanel({ insight, onClose }: { insight: RiskInsight; onClose:
           Fact Pattern
         </h5>
         <div className="rounded-lg border border-border bg-card p-3 space-y-3">
-          {/* Facts */}
-          <div className="text-base leading-relaxed text-foreground">
-            {insight.factPattern.facts.map((fact, index) => (
-              <div key={index}>
-                <span className="font-semibold">{fact.label}:</span> {fact.value}
-              </div>
-            ))}
-          </div>
-          {/* Observations */}
-          <ul className="list-disc list-inside space-y-1 text-base text-foreground">
-            {insight.factPattern.observations.map((obs, index) => (
-              <li key={index}>{obs}</li>
-            ))}
-          </ul>
+          {insight.factPattern.facts && insight.factPattern.facts.length > 0 ? (
+            <div className="text-base leading-relaxed text-foreground">
+              {insight.factPattern.facts.map((fact, index) => (
+                <div key={index}>
+                  <span className="font-semibold">{fact.label}:</span> {fact.value}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {factPatternText ? (
+            <p className="text-base leading-relaxed text-foreground">
+              {factPatternText}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No fact pattern summary available.</p>
+          )}
         </div>
       </div>
       
@@ -2008,11 +2029,15 @@ function RiskInsightPanel({ insight, onClose }: { insight: RiskInsight; onClose:
         <h5 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Lender Justification
         </h5>
-        <ul className="rounded-lg border border-border bg-card p-3 list-disc list-inside space-y-1 text-base text-foreground">
-          {insight.lenderJustification.map((item, index) => (
-            <li key={index}>{item}</li>
-          ))}
-        </ul>
+        <div className="rounded-lg border border-border bg-card p-3">
+          {lenderJustificationText ? (
+            <p className="text-base leading-relaxed text-foreground">
+              {lenderJustificationText}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No lender justification available.</p>
+          )}
+        </div>
       </div>
       
       {/* Final Conclusion Section */}
@@ -2020,11 +2045,15 @@ function RiskInsightPanel({ insight, onClose }: { insight: RiskInsight; onClose:
         <h5 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Final Conclusion
         </h5>
-        <ul className="rounded-lg border border-border bg-card p-3 list-disc list-inside space-y-1 text-base text-foreground">
-          {insight.finalConclusion.map((item, index) => (
-            <li key={index}>{item}</li>
-          ))}
-        </ul>
+        <div className="rounded-lg border border-border bg-card p-3">
+          {finalConclusionText ? (
+            <p className="text-base leading-relaxed text-foreground">
+              {finalConclusionText}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No final conclusion available.</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2092,8 +2121,8 @@ function ComparisonPanel({
 function RuleCategorySection({
   category,
   isExpanded,
-  isInsightOpen,
-  isComparisonOpen,
+  tabInsightOpen,
+  tabComparisonOpen,
   onToggleExpand,
   onToggleInsight,
   onToggleComparison,
@@ -2104,8 +2133,8 @@ function RuleCategorySection({
 }: {
   category: RuleCategory;
   isExpanded: boolean;
-  isInsightOpen: boolean;
-  isComparisonOpen: boolean;
+  tabInsightOpen: boolean;
+  tabComparisonOpen: boolean;
   onToggleExpand: () => void;
   onToggleInsight: () => void;
   onToggleComparison: () => void;
@@ -2176,7 +2205,7 @@ function RuleCategorySection({
             }}
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm",
-              isInsightOpen
+              tabInsightOpen
                 ? "border border-accent bg-transparent text-accent hover:bg-accent/10"
                 : "bg-gradient-to-r from-accent/90 to-accent text-white hover:from-accent hover:to-accent/90 hover:shadow-md"
             )}
@@ -2196,7 +2225,7 @@ function RuleCategorySection({
             }}
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm",
-              isComparisonOpen
+              tabComparisonOpen
                 ? "border border-accent bg-transparent text-accent hover:bg-accent/10"
                 : "bg-gradient-to-r from-accent/90 to-accent text-white hover:from-accent hover:to-accent/90 hover:shadow-md"
             )}
@@ -2211,54 +2240,22 @@ function RuleCategorySection({
       {/* Expanded Content */}
       {isExpanded && (
         <div className="border-t border-border px-5 py-4 space-y-4">
-          {/* Rules Content */}
-          {isInsightOpen || isComparisonOpen ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-2">
-                {sortedRules.map((rule) => (
-                  <RuleCard
-                    key={rule.name}
-                    rule={rule}
-                    comment={comments[rule.name]}
-                    subruleComments={subruleComments?.[rule.name]}
-                    onSaveComment={(ruleName, comment) =>
-                      onSaveComment(category.name, ruleName, comment)
-                    }
-                    onSaveSubruleComment={(ruleName, subruleName, comment) =>
-                      onSaveSubruleComment(category.name, ruleName, subruleName, comment)
-                    }
-                  />
-                ))}
-              </div>
-              {isInsightOpen && (
-                <RiskInsightPanel insight={category.insight} onClose={onToggleInsight} />
-              )}
-              {isComparisonOpen && (
-                <ComparisonPanel
-                  comparison={category.comparison}
-                  categoryName={category.name}
-                  onClose={onToggleComparison}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {sortedRules.map((rule) => (
-                <RuleCard
-                  key={rule.name}
-                  rule={rule}
-                  comment={comments[rule.name]}
-                  subruleComments={subruleComments?.[rule.name]}
-                  onSaveComment={(ruleName, comment) =>
-                    onSaveComment(category.name, ruleName, comment)
-                  }
-                  onSaveSubruleComment={(ruleName, subruleName, comment) =>
-                    onSaveSubruleComment(category.name, ruleName, subruleName, comment)
-                  }
-                />
-              ))}
-            </div>
-          )}
+          <div className="space-y-2">
+            {sortedRules.map((rule) => (
+              <RuleCard
+                key={rule.name}
+                rule={rule}
+                comment={comments[rule.name]}
+                subruleComments={subruleComments?.[rule.name]}
+                onSaveComment={(ruleName, comment) =>
+                  onSaveComment(category.name, ruleName, comment)
+                }
+                onSaveSubruleComment={(ruleName, subruleName, comment) =>
+                  onSaveSubruleComment(category.name, ruleName, subruleName, comment)
+                }
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -2269,6 +2266,8 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<"income" | "valuation">("income");
   const [openInsights, setOpenInsights] = useState<Record<string, boolean>>({});
   const [openComparisons, setOpenComparisons] = useState<Record<string, boolean>>({});
+  const [tabInsightOpen, setTabInsightOpen] = useState<Record<"income" | "valuation", boolean>>({ income: false, valuation: false });
+  const [tabComparisonOpen, setTabComparisonOpen] = useState<Record<"income" | "valuation", boolean>>({ income: false, valuation: false });
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [comments, setComments] = useState<Record<string, Record<string, string>>>({});
   const [subruleComments, setSubruleComments] = useState<Record<string, Record<string, Record<string, string>>>>({});
@@ -2465,31 +2464,35 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
   };
   
   const toggleInsight = (categoryName: string) => {
-    setOpenInsights((prev) => ({
-      ...prev,
-      [categoryName]: !prev[categoryName],
-    }));
-    // Close comparison if opening insight
-    if (!openInsights[categoryName]) {
-      setOpenComparisons((prev) => ({
+    // Toggle at tab level - when any category's insight is clicked, open for entire tab
+    setTabInsightOpen((prev) => {
+      const newValue = !(prev[activeAnalysisTab] || false);
+      return {
         ...prev,
-        [categoryName]: false,
-      }));
-    }
+        [activeAnalysisTab]: newValue,
+      };
+    });
+    // Close comparison if opening insight
+    setTabComparisonOpen((prev) => ({
+      ...prev,
+      [activeAnalysisTab]: false,
+    }));
   };
 
   const toggleComparison = (categoryName: string) => {
-    setOpenComparisons((prev) => ({
-      ...prev,
-      [categoryName]: !prev[categoryName],
-    }));
-    // Close insight if opening comparison
-    if (!openComparisons[categoryName]) {
-      setOpenInsights((prev) => ({
+    // Toggle at tab level - when any category's comparison is clicked, open for entire tab
+    setTabComparisonOpen((prev) => {
+      const newValue = !(prev[activeAnalysisTab] || false);
+      return {
         ...prev,
-        [categoryName]: false,
-      }));
-    }
+        [activeAnalysisTab]: newValue,
+      };
+    });
+    // Close insight if opening comparison
+    setTabInsightOpen((prev) => ({
+      ...prev,
+      [activeAnalysisTab]: false,
+    }));
   };
 
   const savePageComment = () => {
@@ -2510,6 +2513,19 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
       [categoryName]: {
         ...(prev[categoryName] || {}),
         [ruleName]: comment,
+      }
+    }));
+  };
+
+  const handleSaveSubruleComment = (categoryName: string, ruleName: string, subruleName: string, comment: string) => {
+    setSubruleComments(prev => ({
+      ...prev,
+      [categoryName]: {
+        ...(prev[categoryName] || {}),
+        [ruleName]: {
+          ...(prev[categoryName]?.[ruleName] || {}),
+          [subruleName]: comment,
+        }
       }
     }));
   };
@@ -2558,8 +2574,8 @@ const analysisData = {
     valuation: { title: "Valuation Analysis", rules: [] as RuleCategory[] },
   };
   
-  const currentAnalysis = analysisData[activeAnalysisTab];
-  const hasCurrentAnalysisRules = (currentAnalysis.rules?.length ?? 0) > 0;
+  const currentAnalysis = analysisData[activeAnalysisTab] || { title: "", rules: [] };
+  const hasCurrentAnalysisRules = (currentAnalysis?.rules?.length ?? 0) > 0;
   
   const totalComments = Object.values(comments).reduce(
     (acc, categoryComments) => acc + Object.values(categoryComments).filter(c => c.trim()).length,
@@ -2833,7 +2849,11 @@ const analysisData = {
         {/* Tabs */}
         <div className="mb-6 flex gap-2 border-b border-border">
           <button
-            onClick={() => setActiveAnalysisTab("income")}
+            onClick={() => {
+              setActiveAnalysisTab("income");
+              setTabInsightOpen(prev => ({ ...prev, income: false, valuation: false }));
+              setTabComparisonOpen(prev => ({ ...prev, income: false, valuation: false }));
+            }}
             className={cn(
               "px-4 py-3 text-base font-medium transition-colors border-b-2 -mb-[2px]",
               activeAnalysisTab === "income"
@@ -2844,7 +2864,11 @@ const analysisData = {
             Income & Expense
           </button>
           <button
-            onClick={() => setActiveAnalysisTab("valuation")}
+            onClick={() => {
+              setActiveAnalysisTab("valuation");
+              setTabInsightOpen(prev => ({ ...prev, income: false, valuation: false }));
+              setTabComparisonOpen(prev => ({ ...prev, income: false, valuation: false }));
+            }}
             className={cn(
               "px-4 py-3 text-base font-medium transition-colors border-b-2 -mb-[2px]",
               activeAnalysisTab === "valuation"
@@ -2861,7 +2885,7 @@ const analysisData = {
           {/* Header with Risk Score and Compliance Score */}
           <div className="rounded-lg border border-border bg-muted/30 p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <h3 className="text-xl font-semibold text-foreground">{currentAnalysis.title}</h3>
+              <h3 className="text-xl font-semibold text-foreground">{currentAnalysis?.title || "Analysis"}</h3>
               <div className="flex flex-wrap items-center gap-6">
                 {/* Risk Score */}
                 <div className="flex items-center gap-2">
@@ -2949,11 +2973,11 @@ const analysisData = {
                       );
                     }
 
-                    const fallbackPassed = currentAnalysis.rules.reduce(
+                    const fallbackPassed = (currentAnalysis.rules || []).reduce(
                       (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
                       0
                     );
-                    const fallbackTotal = currentAnalysis.rules.reduce(
+                    const fallbackTotal = (currentAnalysis.rules || []).reduce(
                       (acc, cat) =>
                         acc +
                         cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
@@ -2998,7 +3022,7 @@ const filledSegments = Math.round((percentage / 100) * 5);
             </div>
 
             {/* Summary Section */}
-            {activeAnalysisTab === "income" && (
+            {activeAnalysisTab === "income" && currentAnalysis.rules && currentAnalysis.rules.length > 0 && (
               <div className="mt-4 border-t border-border pt-4">
                 <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                   Summary
@@ -3010,21 +3034,44 @@ const filledSegments = Math.round((percentage / 100) * 5);
             )}
           </div>
 
-          {activeAnalysisTab === "income" &&
-            currentAnalysis.rules.map((category) => (
-              <RuleCategorySection
-                key={category.name}
-                category={category}
-                isExpanded={expandedCategories[category.name] || false}
-                isInsightOpen={openInsights[category.name] || false}
-                isComparisonOpen={openComparisons[category.name] || false}
-                onToggleExpand={() => toggleExpanded(category.name)}
-                onToggleInsight={() => toggleInsight(category.name)}
-                onToggleComparison={() => toggleComparison(category.name)}
-                comments={comments[category.name] || {}}
-                onSaveComment={handleSaveComment}
-              />
-            ))}
+          {activeAnalysisTab === "income" && currentAnalysis?.rules && (
+            <div className={cn(
+              "grid gap-4",
+              (((tabInsightOpen[activeAnalysisTab] || false) || (tabComparisonOpen[activeAnalysisTab] || false)) && currentAnalysis?.rules && currentAnalysis.rules.length > 0) ? "lg:grid-cols-2" : ""
+            )}>
+              <div className="space-y-4">
+                {currentAnalysis.rules.map((category) => (
+                  <RuleCategorySection
+                    key={category.name}
+                    category={category}
+                    isExpanded={expandedCategories[category.name] || false}
+                    tabInsightOpen={tabInsightOpen[activeAnalysisTab] || false}
+                    tabComparisonOpen={tabComparisonOpen[activeAnalysisTab] || false}
+                    onToggleExpand={() => toggleExpanded(category.name)}
+                    onToggleInsight={() => toggleInsight(category.name)}
+                    onToggleComparison={() => toggleComparison(category.name)}
+                    comments={comments[category.name] || {}}
+                    subruleComments={subruleComments[category.name]}
+                    onSaveComment={handleSaveComment}
+                    onSaveSubruleComment={handleSaveSubruleComment}
+                  />
+                ))}
+              </div>
+              {(tabInsightOpen[activeAnalysisTab] || false) && currentAnalysis?.rules && currentAnalysis.rules.length > 0 && currentAnalysis.rules[0] && (
+                <RiskInsightPanel 
+                  insight={currentAnalysis.rules[0].insight} 
+                  onClose={() => setTabInsightOpen(prev => ({ ...prev, [activeAnalysisTab]: false }))} 
+                />
+              )}
+              {(tabComparisonOpen[activeAnalysisTab] || false) && currentAnalysis?.rules && currentAnalysis.rules.length > 0 && currentAnalysis.rules[0] && (
+                <ComparisonPanel
+                  comparison={currentAnalysis.rules[0].comparison}
+                  categoryName={currentAnalysis?.title || "Analysis"}
+                  onClose={() => setTabComparisonOpen(prev => ({ ...prev, [activeAnalysisTab]: false }))}
+                />
+              )}
+            </div>
+          )}
 
           {/* Additional Comments Section */}
           <div className="rounded-lg border border-border bg-muted/30 p-5">
