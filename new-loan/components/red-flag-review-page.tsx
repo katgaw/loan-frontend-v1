@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   MinusCircle,
   Sparkles,
+  FileText,
   ChevronDown,
   ChevronRight,
   MessageSquare,
@@ -38,7 +39,61 @@ interface RedFlagQuestion {
   question: string;
   response: ResponseType;
   rationale: string;
+  answer?: string;
   aiInsight: string;
+}
+
+function normalizeKey(s: string): string {
+  return s.toLowerCase().replace(/[\s_]/g, "");
+}
+
+function extractQuestionAnswerPairs(
+  data: unknown,
+  desiredKey: string
+): Array<{ question: string; answer?: string }> | null {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  const foundKey = Object.keys(record).find((k) => normalizeKey(k) === normalizeKey(desiredKey));
+  if (!foundKey) return null;
+
+  const section = record[foundKey];
+  if (!section || typeof section !== "object") return null;
+
+  const sectionRec = section as Record<string, unknown>;
+  const q = sectionRec.question;
+  const a = sectionRec.answer;
+  if (!Array.isArray(q)) return null;
+
+  const questions = q
+    .filter((x): x is string => typeof x === "string")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const answers = Array.isArray(a)
+    ? a
+        .filter((x): x is string => typeof x === "string")
+        .map((s) => s.trim())
+    : [];
+
+  if (questions.length === 0) return null;
+  return questions.map((question, idx) => ({
+    question,
+    answer: answers[idx],
+  }));
+}
+
+function makeQuestions(
+  prefix: "L" | "FM",
+  items: Array<{ question: string; answer?: string }>
+): RedFlagQuestion[] {
+  return items.map(({ question, answer }, idx) => ({
+    id: `${prefix}${idx + 1}`,
+    question,
+    response: "N/A",
+    rationale: "",
+    answer,
+    aiInsight: "",
+  }));
 }
 
 // Lender Red Flags Review Questions
@@ -267,15 +322,33 @@ function QuestionCard({
       {/* Expanded Content - AI Insight Only */}
       {isExpanded && (
         <div className="border-t border-border px-5 pb-5 pt-4">
-          <h5 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            <Sparkles className="h-4 w-4 text-accent" />
-            AI Insight
-          </h5>
-          <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
-            <p className="text-base leading-relaxed text-foreground">
-              {question.aiInsight}
-            </p>
-          </div>
+          {question.answer ? (
+            <>
+              <h5 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                <FileText className="h-4 w-4 text-accent" />
+                Answer
+              </h5>
+              <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
+                <p className="text-base leading-relaxed text-foreground">
+                  {question.answer}
+                </p>
+              </div>
+            </>
+          ) : null}
+
+          {question.aiInsight ? (
+            <>
+              <h5 className={cn("flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground", question.answer ? "mt-4 mb-2" : "mb-2")}>
+                <Sparkles className="h-4 w-4 text-accent" />
+                AI Insight
+              </h5>
+              <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
+                <p className="text-base leading-relaxed text-foreground">
+                  {question.aiInsight}
+                </p>
+              </div>
+            </>
+          ) : null}
         </div>
       )}
     </div>
@@ -287,6 +360,27 @@ export function RedFlagReviewPage({ onBack }: RedFlagReviewPageProps) {
   const [lenderQuestions, setLenderQuestions] = useState<RedFlagQuestion[]>(lenderRedFlagsQuestions);
   const [fannieMaeQuestions, setFannieMaeQuestions] = useState<RedFlagQuestion[]>(fannieMaeRedFlagsQuestions);
   
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/test-json")
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Failed to load test.json: ${r.status}`);
+        return await r.json();
+      })
+      .then((data) => {
+        if (!isMounted) return;
+        const lenderFromJson = extractQuestionAnswerPairs(data, "Lender red flag");
+        const companyFromJson = extractQuestionAnswerPairs(data, "Company red flag");
+        if (lenderFromJson) setLenderQuestions(makeQuestions("L", lenderFromJson));
+        if (companyFromJson) setFannieMaeQuestions(makeQuestions("FM", companyFromJson));
+      })
+      .catch(() => {
+        // Keep hard-coded fallbacks
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const currentQuestions = activeTab === "lender" ? lenderQuestions : fannieMaeQuestions;
 

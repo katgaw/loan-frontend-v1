@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { buildRuleCategoriesBySectionFromTestJson, type UiRuleCategory } from "@/lib/test-rule-results";
+import {
+  parsePropertyAddressFromLoanSummaryStatement,
+  type ParsedPropertyAddress,
+} from "@/lib/address";
+import { loansData, type Loan as LoanListLoan } from "@/lib/loan-data";
 import {
   Download,
   Printer,
@@ -29,6 +35,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 interface LoanDetailPageProps {
+  loanId?: string;
   onNavigateToRedFlagReview?: () => void;
 }
 
@@ -41,6 +48,7 @@ interface Subrule {
 }
 
 interface Rule {
+  ruleId?: string;
   name: string;
   description: string;
   status: RuleStatus;
@@ -75,6 +83,42 @@ interface RuleCategory {
   rules: Rule[];
   insight: RiskInsight;
   comparison: ComparisonData;
+}
+
+type LoanSummaryScores = {
+  riskScore: 1 | 2 | 3 | 4;
+  compliance: { passed: number; total: number };
+};
+
+function pickLoanSummaryStatement(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const factsLookup = (data as Record<string, unknown>)["facts_lookup"];
+  if (!factsLookup || typeof factsLookup !== "object") return null;
+  const factLoanSummary031 = (factsLookup as Record<string, unknown>)["fact_loan_summary_031"];
+  if (!factLoanSummary031 || typeof factLoanSummary031 !== "object") return null;
+  const statement = (factLoanSummary031 as Record<string, unknown>)["statement"];
+  return typeof statement === "string" ? statement : null;
+}
+
+function pickLoanSummaryScores(data: unknown): LoanSummaryScores | null {
+  if (!data || typeof data !== "object") return null;
+  const loanSummary = (data as Record<string, unknown>)["loan_summary"];
+  if (!loanSummary || typeof loanSummary !== "object") return null;
+
+  const rawRisk = (loanSummary as Record<string, unknown>)["risk_score"];
+  const risk = typeof rawRisk === "string" ? Number.parseInt(rawRisk, 10) : rawRisk;
+  if (typeof risk !== "number" || !Number.isFinite(risk)) return null;
+  if (risk !== 1 && risk !== 2 && risk !== 3 && risk !== 4) return null;
+
+  const rawCompliance = (loanSummary as Record<string, unknown>)["compliance_score"];
+  if (typeof rawCompliance !== "string") return null;
+  const parts = rawCompliance.split("/").map((p) => p.trim());
+  if (parts.length !== 2) return null;
+  const passed = Number.parseInt(parts[0] ?? "", 10);
+  const total = Number.parseInt(parts[1] ?? "", 10);
+  if (!Number.isFinite(passed) || !Number.isFinite(total) || total <= 0) return null;
+
+  return { riskScore: risk, compliance: { passed, total } };
 }
 
 // Loan details data
@@ -1539,6 +1583,7 @@ insight: {
 ];
 
 function formatCurrency(value: number): string {
+  if (!Number.isFinite(value)) return "—";
   if (value >= 1000000) {
     return `$${(value / 1000000).toFixed(1)}M`;
   }
@@ -1551,7 +1596,10 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  if (!dateString) return "—";
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -1728,7 +1776,14 @@ function RuleCard({
           ) : (
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           )}
-          <h4 className="text-lg font-semibold text-foreground">{rule.name}</h4>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h4 className="text-lg font-semibold text-foreground">{rule.name}</h4>
+            {rule.ruleId && (
+              <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                Rule ID: {rule.ruleId}
+              </span>
+            )}
+          </div>
         </button>
         <div className="flex items-center gap-3">
           {/* Comment Icon */}
@@ -2071,7 +2126,7 @@ function RuleCategorySection({
   const overallStatus = failCount === 0 ? "PASS" : "FAIL";
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-card">
       {/* Collapsible Header */}
       <div
         role="button"
@@ -2122,7 +2177,7 @@ function RuleCategorySection({
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm",
               isInsightOpen
-                ? "bg-accent text-white shadow-accent/30"
+                ? "border border-accent bg-transparent text-accent hover:bg-accent/10"
                 : "bg-gradient-to-r from-accent/90 to-accent text-white hover:from-accent hover:to-accent/90 hover:shadow-md"
             )}
             title="View Risk Insight"
@@ -2142,8 +2197,8 @@ function RuleCategorySection({
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm",
               isComparisonOpen
-                ? "bg-accent text-white shadow-accent/30"
-                : "border border-accent bg-transparent text-accent hover:bg-accent/10"
+                ? "border border-accent bg-transparent text-accent hover:bg-accent/10"
+                : "bg-gradient-to-r from-accent/90 to-accent text-white hover:from-accent hover:to-accent/90 hover:shadow-md"
             )}
             title="View Comparison"
           >
@@ -2210,7 +2265,7 @@ function RuleCategorySection({
   );
 }
 
-export function LoanDetailPage({ onNavigateToRedFlagReview }: LoanDetailPageProps) {
+export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetailPageProps) {
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<"income" | "valuation">("income");
   const [openInsights, setOpenInsights] = useState<Record<string, boolean>>({});
   const [openComparisons, setOpenComparisons] = useState<Record<string, boolean>>({});
@@ -2219,6 +2274,190 @@ export function LoanDetailPage({ onNavigateToRedFlagReview }: LoanDetailPageProp
   const [subruleComments, setSubruleComments] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [incomePageComment, setIncomePageComment] = useState("");
   const [valuationPageComment, setValuationPageComment] = useState("");
+  const [jsonRuleCategoriesBySection, setJsonRuleCategoriesBySection] = useState<Record<string, UiRuleCategory[]> | null>(null);
+  const [jsonRiskInsights, setJsonRiskInsights] = useState<{
+    summary_narrative?: string;
+    key_risk_areas?: string[];
+  } | null>(null);
+  const [propertyAddressFromFacts, setPropertyAddressFromFacts] =
+    useState<ParsedPropertyAddress | null>(null);
+  const [jsonLoanSummary, setJsonLoanSummary] = useState<Record<string, unknown> | null>(null);
+  const [loanSummaryScores, setLoanSummaryScores] = useState<LoanSummaryScores | null>(null);
+  
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/test-json")
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Failed to load test.json: ${r.status}`);
+        return await r.json();
+      })
+      .then((data) => {
+        if (!isMounted) return;
+        // Always set headline scores first; other parsing should never block them.
+        setLoanSummaryScores(pickLoanSummaryScores(data));
+
+        try {
+          setJsonRuleCategoriesBySection(buildRuleCategoriesBySectionFromTestJson(data));
+        } catch {
+          setJsonRuleCategoriesBySection(null);
+        }
+
+        try {
+          setJsonRiskInsights(
+            data && typeof data === "object" && "risk_insights" in data
+              ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ((data as any).risk_insights ?? null)
+              : null
+          );
+        } catch {
+          setJsonRiskInsights(null);
+        }
+
+        try {
+          const statement = pickLoanSummaryStatement(data);
+          setPropertyAddressFromFacts(parsePropertyAddressFromLoanSummaryStatement(statement));
+        } catch {
+          setPropertyAddressFromFacts(null);
+        }
+
+        try {
+          setJsonLoanSummary(
+            data && typeof data === "object" && "loan_summary" in data
+              ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ((data as any).loan_summary && typeof (data as any).loan_summary === "object"
+                  ? ((data as any).loan_summary as Record<string, unknown>)
+                  : null)
+              : null
+          );
+        } catch {
+          setJsonLoanSummary(null);
+        }
+      })
+      .catch(() => {
+        // If fetch fails (missing file, etc.), keep the hard-coded fallback rules.
+        if (!isMounted) return;
+        setJsonRuleCategoriesBySection(null);
+        setJsonRiskInsights(null);
+        setPropertyAddressFromFacts(null);
+        setLoanSummaryScores(null);
+        setJsonLoanSummary(null);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedLoan: LoanListLoan | null =
+    typeof loanId === "string" && loanId.trim().length > 0
+      ? loansData.find((l) => l.id === loanId) ?? null
+      : null;
+
+  const mappedLoanDetails = selectedLoan
+    ? {
+        propertyName: selectedLoan.address,
+        financingType: selectedLoan.financing,
+        loanNumber: selectedLoan.loanNumber,
+        loanAmount: selectedLoan.loanAmount,
+        propertyType: selectedLoan.propertyType,
+        acquisitionDate: selectedLoan.acquisitionDate,
+        lenderName: selectedLoan.lenderName,
+        propertyAddress: `${selectedLoan.address}, ${selectedLoan.city}, ${selectedLoan.state}`,
+        currentUPB: selectedLoan.upb,
+        productType: selectedLoan.loanType,
+        commitmentDate: selectedLoan.commitmentDate,
+        borrower: "—",
+        riskScore: selectedLoan.riskScore as 1 | 2 | 3 | 4,
+        complianceScore: selectedLoan.complianceScore,
+        units: selectedLoan.units,
+        occupancy: selectedLoan.occupancy,
+        dscr: selectedLoan.dscr,
+        ltv: selectedLoan.ltv,
+        noi: 0,
+        debtYield: 0,
+      }
+    : null;
+
+  const baseLoanDetails = mappedLoanDetails ?? loanDetails;
+
+  const narrativeText = jsonRiskInsights?.summary_narrative?.trim();
+  const narrativeParagraphs =
+    narrativeText && narrativeText.length > 0
+      ? narrativeText.split(/\n\s*\n/).filter(Boolean)
+      : [summaryNarrative.overview, summaryNarrative.riskAssessment];
+
+  const keyRiskAreas =
+    jsonRiskInsights?.key_risk_areas && jsonRiskInsights.key_risk_areas.length > 0
+      ? jsonRiskInsights.key_risk_areas
+      : summaryNarrative.keyRiskAreas;
+
+  const textOrDash = (value: unknown): string => {
+    if (value === null || value === undefined) return "—";
+    if (typeof value === "string") return value.trim() ? value : "—";
+    return String(value);
+  };
+
+  const pickLoanSummaryField = (...keys: string[]): unknown => {
+    if (!jsonLoanSummary) return undefined;
+    for (const key of keys) {
+      if (key in jsonLoanSummary) return jsonLoanSummary[key];
+    }
+    return undefined;
+  };
+
+  const jsonLoanNumberCandidate =
+    jsonLoanSummary !== null
+      ? textOrDash(pickLoanSummaryField("loan_number", "loanNumber", "loan_id", "loanId"))
+      : null;
+
+  const hasJsonLoanSummary =
+    jsonLoanSummary !== null &&
+    selectedLoan !== null &&
+    typeof jsonLoanNumberCandidate === "string" &&
+    jsonLoanNumberCandidate !== "—" &&
+    jsonLoanNumberCandidate === selectedLoan.loanNumber;
+
+  const displayRiskScore = loanSummaryScores?.riskScore ?? baseLoanDetails.riskScore;
+
+  const toNumber = (value: unknown): number | null => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const n = Number(trimmed);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
+  const displayedLoanDetails = {
+    ...baseLoanDetails,
+    loanNumber: hasJsonLoanSummary
+      ? textOrDash(pickLoanSummaryField("loan_number", "loanNumber", "loan_id", "loanId"))
+      : baseLoanDetails.loanNumber,
+    loanAmount: hasJsonLoanSummary
+      ? (toNumber(pickLoanSummaryField("loan_amount", "loanAmount")) ?? Number.NaN)
+      : baseLoanDetails.loanAmount,
+    propertyType: hasJsonLoanSummary
+      ? textOrDash(pickLoanSummaryField("property_type", "propertyType"))
+      : baseLoanDetails.propertyType,
+    acquisitionDate: hasJsonLoanSummary
+      ? textOrDash(pickLoanSummaryField("acquisition_date", "acquisitionDate"))
+      : baseLoanDetails.acquisitionDate,
+    lenderName: hasJsonLoanSummary
+      ? textOrDash(pickLoanSummaryField("lender_name", "lenderName"))
+      : baseLoanDetails.lenderName,
+    currentUPB: hasJsonLoanSummary
+      ? (toNumber(pickLoanSummaryField("upb", "current_upb", "currentUPB")) ?? Number.NaN)
+      : baseLoanDetails.currentUPB,
+    productType: hasJsonLoanSummary
+      ? textOrDash(pickLoanSummaryField("product_type", "productType"))
+      : baseLoanDetails.productType,
+    commitmentDate: hasJsonLoanSummary
+      ? textOrDash(pickLoanSummaryField("commitment_date", "commitmentDate"))
+      : baseLoanDetails.commitmentDate,
+    borrower: hasJsonLoanSummary ? textOrDash(pickLoanSummaryField("borrower")) : baseLoanDetails.borrower,
+    riskScore: displayRiskScore,
+  };
   
   const toggleInsight = (categoryName: string) => {
     setOpenInsights((prev) => ({
@@ -2294,16 +2533,28 @@ export function LoanDetailPage({ onNavigateToRedFlagReview }: LoanDetailPageProp
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `loan-comments-${loanDetails.loanNumber}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `loan-comments-${displayedLoanDetails.loanNumber}-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
   
 const analysisData = {
-    income: { title: "Income & Expense", rules: incomeExpenseRules },
-    valuation: { title: "Valuation Analysis", rules: valuationRules },
+    income: { 
+      title: "Income & Expense", 
+      rules: (() => {
+        if (!jsonRuleCategoriesBySection) return incomeExpenseRules;
+        const incomeKey =
+          Object.keys(jsonRuleCategoriesBySection).find((k) => k.toLowerCase().includes("income")) ??
+          Object.keys(jsonRuleCategoriesBySection)[0];
+        const fromJson = incomeKey ? jsonRuleCategoriesBySection[incomeKey] : undefined;
+        return (fromJson && fromJson.length > 0 ? (fromJson as unknown as RuleCategory[]) : incomeExpenseRules);
+      })()
+    },
+    // Valuation intentionally starts empty (no summary / rules entries yet).
+    valuation: { title: "Valuation Analysis", rules: [] as RuleCategory[] },
   };
   
   const currentAnalysis = analysisData[activeAnalysisTab];
+  const hasCurrentAnalysisRules = (currentAnalysis.rules?.length ?? 0) > 0;
   
   const totalComments = Object.values(comments).reduce(
     (acc, categoryComments) => acc + Object.values(categoryComments).filter(c => c.trim()).length,
@@ -2340,48 +2591,64 @@ const analysisData = {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-card-foreground">
-              {loanDetails.propertyName} - {loanDetails.financingType}
+              {displayedLoanDetails.propertyName} - {displayedLoanDetails.financingType}
             </h2>
-            <p className="text-base text-muted-foreground">{loanDetails.propertyAddress}</p>
+            {hasJsonLoanSummary && propertyAddressFromFacts ? (
+              <div className="text-base leading-snug text-muted-foreground">
+                <p>{propertyAddressFromFacts.street}</p>
+                {propertyAddressFromFacts.city &&
+                propertyAddressFromFacts.state &&
+                propertyAddressFromFacts.postalCode ? (
+                  <p>
+                    {propertyAddressFromFacts.city}, {propertyAddressFromFacts.state}{" "}
+                    {propertyAddressFromFacts.postalCode}
+                  </p>
+                ) : (
+                  <p className="sr-only">{propertyAddressFromFacts.formattedSingleLine}</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-base text-muted-foreground">{displayedLoanDetails.propertyAddress}</p>
+            )}
           </div>
         </div>
         
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Loan Number</p>
-            <p className="text-base font-semibold text-foreground">{loanDetails.loanNumber}</p>
+            <p className="text-base font-semibold text-foreground">{displayedLoanDetails.loanNumber}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Loan Amount</p>
-            <p className="text-base font-semibold text-foreground">{formatCurrency(loanDetails.loanAmount)}</p>
+            <p className="text-base font-semibold text-foreground">{formatCurrency(displayedLoanDetails.loanAmount)}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Property Type</p>
-            <p className="text-base font-semibold text-foreground">{loanDetails.propertyType}</p>
+            <p className="text-base font-semibold text-foreground">{displayedLoanDetails.propertyType}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Acquisition Date</p>
-            <p className="text-base font-semibold text-foreground">{formatDate(loanDetails.acquisitionDate)}</p>
+            <p className="text-base font-semibold text-foreground">{formatDate(displayedLoanDetails.acquisitionDate)}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Lender Name</p>
-            <p className="text-base font-semibold text-foreground">{loanDetails.lenderName}</p>
+            <p className="text-base font-semibold text-foreground">{displayedLoanDetails.lenderName}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Current UPB</p>
-            <p className="text-base font-semibold text-foreground">{formatCurrency(loanDetails.currentUPB)}</p>
+            <p className="text-base font-semibold text-foreground">{formatCurrency(displayedLoanDetails.currentUPB)}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Product Type</p>
-            <p className="text-base font-semibold text-foreground">{loanDetails.productType}</p>
+            <p className="text-base font-semibold text-foreground">{displayedLoanDetails.productType}</p>
           </div>
           <div className="space-y-1.5">
 <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Commitment Date</p>
-          <p className="text-base font-semibold text-foreground">{formatDate(loanDetails.commitmentDate)}</p>
+          <p className="text-base font-semibold text-foreground">{formatDate(displayedLoanDetails.commitmentDate)}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Borrower</p>
-            <p className="text-base font-semibold text-foreground">{loanDetails.borrower}</p>
+            <p className="text-base font-semibold text-foreground">{displayedLoanDetails.borrower}</p>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Risk Score</p>
@@ -2392,28 +2659,28 @@ const analysisData = {
                 <path
                   d="M 4 20 A 14 14 0 0 1 10 8"
                   fill="none"
-                  stroke={loanDetails.riskScore === 1 ? "#22c55e" : "#e5e7eb"}
+                  stroke={displayRiskScore === 1 ? "#22c55e" : "#e5e7eb"}
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
                 <path
                   d="M 11 7 A 14 14 0 0 1 18 5"
                   fill="none"
-                  stroke={loanDetails.riskScore <= 2 ? "#22c55e" : "#e5e7eb"}
+                  stroke={displayRiskScore <= 2 ? "#22c55e" : "#e5e7eb"}
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
                 <path
                   d="M 19 5 A 14 14 0 0 1 26 7"
                   fill="none"
-                  stroke={loanDetails.riskScore === 3 ? "#eab308" : "#e5e7eb"}
+                  stroke={displayRiskScore === 3 ? "#eab308" : "#e5e7eb"}
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
                 <path
                   d="M 27 8 A 14 14 0 0 1 32 20"
                   fill="none"
-                  stroke={loanDetails.riskScore === 4 ? "#ef4444" : "#e5e7eb"}
+                  stroke={displayRiskScore === 4 ? "#ef4444" : "#e5e7eb"}
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
@@ -2421,9 +2688,9 @@ const analysisData = {
                 <line
                   x1="18"
                   y1="20"
-                  x2={loanDetails.riskScore === 1 ? 8 : loanDetails.riskScore === 2 ? 13 : loanDetails.riskScore === 3 ? 23 : 28}
-                  y2={loanDetails.riskScore === 1 ? 12 : loanDetails.riskScore === 2 ? 7 : loanDetails.riskScore === 3 ? 7 : 12}
-                  stroke={loanDetails.riskScore <= 2 ? "#22c55e" : loanDetails.riskScore === 3 ? "#eab308" : "#ef4444"}
+                  x2={displayRiskScore === 1 ? 8 : displayRiskScore === 2 ? 13 : displayRiskScore === 3 ? 23 : 28}
+                  y2={displayRiskScore === 1 ? 12 : displayRiskScore === 2 ? 7 : displayRiskScore === 3 ? 7 : 12}
+                  stroke={displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"}
                   strokeWidth="2"
                   strokeLinecap="round"
                 />
@@ -2432,35 +2699,50 @@ const analysisData = {
                   cx="18" 
                   cy="20" 
                   r="2.5" 
-                  fill={loanDetails.riskScore <= 2 ? "#22c55e" : loanDetails.riskScore === 3 ? "#eab308" : "#ef4444"} 
+                  fill={displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"} 
                 />
               </svg>
               <span className={cn(
                 "text-2xl font-bold",
-                loanDetails.riskScore <= 2 ? "text-pass" : 
-                loanDetails.riskScore === 3 ? "text-medium" : "text-fail"
+                displayRiskScore <= 2 ? "text-pass" : 
+                displayRiskScore === 3 ? "text-medium" : "text-fail"
               )}>
-                {loanDetails.riskScore}
+                {displayRiskScore}
               </span>
             </div>
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Compliance Score</p>
             {(() => {
-              const passed = incomeExpenseRules.reduce(
-                (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
-                0
-              ) + valuationRules.reduce(
-                (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
-                0
-              );
-              const total = incomeExpenseRules.reduce(
-                (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
-                0
-              ) + valuationRules.reduce(
-                (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
-                0
-              );
+              const fallbackPassed =
+                incomeExpenseRules.reduce(
+                  (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
+                  0
+                ) +
+                valuationRules.reduce(
+                  (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
+                  0
+                );
+              const fallbackTotal =
+                incomeExpenseRules.reduce(
+                  (acc, cat) =>
+                    acc + cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
+                  0
+                ) +
+                valuationRules.reduce(
+                  (acc, cat) =>
+                    acc + cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
+                  0
+                );
+
+              const passed =
+                loanSummaryScores?.compliance.passed ??
+                selectedLoan?.complianceScoreData.passed ??
+                fallbackPassed;
+              const total =
+                loanSummaryScores?.compliance.total ??
+                selectedLoan?.complianceScoreData.total ??
+                fallbackTotal;
               const percentage = total > 0 ? (passed / total) * 100 : 0;
               const fillColor = percentage >= 70 ? "#22c55e" : percentage >= 50 ? "#eab308" : "#ef4444";
               const colorClass = percentage >= 70 ? "text-pass" : percentage >= 50 ? "text-medium" : "text-fail";
@@ -2489,7 +2771,7 @@ const analysisData = {
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Units</p>
-            <p className="text-base font-semibold text-foreground">{loanDetails.units}</p>
+            <p className="text-base font-semibold text-foreground">{baseLoanDetails.units}</p>
           </div>
         </div>
       </div>
@@ -2502,8 +2784,11 @@ const analysisData = {
         </div>
         
         <div className="space-y-4">
-          <p className="text-base leading-relaxed text-foreground">{summaryNarrative.overview}</p>
-          <p className="text-base leading-relaxed text-foreground">{summaryNarrative.riskAssessment}</p>
+          {narrativeParagraphs.map((p, idx) => (
+            <p key={idx} className="text-base leading-relaxed text-foreground">
+              {p}
+            </p>
+          ))}
         </div>
         
         {/* Key Risk Areas */}
@@ -2513,7 +2798,7 @@ const analysisData = {
             <h3 className="text-lg font-semibold text-foreground">Key Risk Areas Identified</h3>
           </div>
           <ul className="space-y-2.5">
-            {summaryNarrative.keyRiskAreas.map((risk, index) => (
+            {keyRiskAreas.map((risk, index) => (
               <li key={index} className="flex items-start gap-2.5 text-base text-foreground">
                 <span className="mt-2 block h-2 w-2 shrink-0 rounded-full bg-fail" />
                 {risk}
@@ -2577,19 +2862,8 @@ const analysisData = {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Risk Score:</span>
                   {(() => {
-                    const avgRisk = Math.round(
-                      currentAnalysis.rules.reduce((acc, cat) => {
-                        const applicable = cat.rules.filter((r) => r.status !== "n/a");
-                        return (
-                          acc +
-                          (applicable.length > 0
-                            ? applicable.reduce((sum, r) => sum + r.riskScore, 0) /
-                              applicable.length
-                            : 0)
-                        );
-                      }, 0) / currentAnalysis.rules.length
-                    );
-                    const fillColor = avgRisk <= 2 ? "#22c55e" : avgRisk === 3 ? "#eab308" : "#ef4444";
+                    const riskScore = displayRiskScore;
+                    const fillColor = riskScore <= 2 ? "#22c55e" : riskScore === 3 ? "#eab308" : "#ef4444";
                     return (
                       <div className="flex items-center gap-2">
                         {/* Gauge/Meter Arc Icon */}
@@ -2597,36 +2871,36 @@ const analysisData = {
                           <path
                             d="M 4 20 A 14 14 0 0 1 10 8"
                             fill="none"
-                            stroke={avgRisk === 1 ? "#22c55e" : "#e5e7eb"}
+                            stroke={riskScore === 1 ? "#22c55e" : "#e5e7eb"}
                             strokeWidth="3"
                             strokeLinecap="round"
                           />
                           <path
                             d="M 11 7 A 14 14 0 0 1 18 5"
                             fill="none"
-                            stroke={avgRisk <= 2 ? "#22c55e" : "#e5e7eb"}
+                            stroke={riskScore <= 2 ? "#22c55e" : "#e5e7eb"}
                             strokeWidth="3"
                             strokeLinecap="round"
                           />
                           <path
                             d="M 19 5 A 14 14 0 0 1 26 7"
                             fill="none"
-                            stroke={avgRisk === 3 ? "#eab308" : "#e5e7eb"}
+                            stroke={riskScore === 3 ? "#eab308" : "#e5e7eb"}
                             strokeWidth="3"
                             strokeLinecap="round"
                           />
                           <path
                             d="M 27 8 A 14 14 0 0 1 32 20"
                             fill="none"
-                            stroke={avgRisk === 4 ? "#ef4444" : "#e5e7eb"}
+                            stroke={riskScore === 4 ? "#ef4444" : "#e5e7eb"}
                             strokeWidth="3"
                             strokeLinecap="round"
                           />
                           <line
                             x1="18"
                             y1="20"
-                            x2={avgRisk === 1 ? 8 : avgRisk === 2 ? 13 : avgRisk === 3 ? 23 : 28}
-                            y2={avgRisk === 1 ? 12 : avgRisk === 2 ? 7 : avgRisk === 3 ? 7 : 12}
+                            x2={riskScore === 1 ? 8 : riskScore === 2 ? 13 : riskScore === 3 ? 23 : 28}
+                            y2={riskScore === 1 ? 12 : riskScore === 2 ? 7 : riskScore === 3 ? 7 : 12}
                             stroke={fillColor}
                             strokeWidth="2"
                             strokeLinecap="round"
@@ -2636,14 +2910,14 @@ const analysisData = {
                         <span
                           className={cn(
                             "text-lg font-bold",
-                            avgRisk <= 2
+                            riskScore <= 2
                               ? "text-pass"
-                              : avgRisk === 3
+                              : riskScore === 3
                                 ? "text-medium"
                                 : "text-fail"
                           )}
                         >
-                          {avgRisk}
+                          {riskScore}
                         </span>
                       </div>
                     );
@@ -2653,16 +2927,42 @@ const analysisData = {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Compliance Score:</span>
                   {(() => {
-                    const passed = currentAnalysis.rules.reduce(
+                    if (!hasCurrentAnalysisRules) {
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="h-4 w-3 rounded-sm"
+                                style={{ backgroundColor: "#e5e7eb" }}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-lg font-bold text-muted-foreground">—</span>
+                        </div>
+                      );
+                    }
+
+                    const fallbackPassed = currentAnalysis.rules.reduce(
                       (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
                       0
                     );
-                    const total = currentAnalysis.rules.reduce(
+                    const fallbackTotal = currentAnalysis.rules.reduce(
                       (acc, cat) =>
                         acc +
                         cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
                       0
                     );
+
+                    const passed =
+                      loanSummaryScores?.compliance.passed ??
+                      selectedLoan?.complianceScoreData.passed ??
+                      fallbackPassed;
+                    const total =
+                      loanSummaryScores?.compliance.total ??
+                      selectedLoan?.complianceScoreData.total ??
+                      fallbackTotal;
 const percentage = total > 0 ? (passed / total) * 100 : 0;
 const fillColor = percentage >= 70 ? "#22c55e" : percentage >= 50 ? "#eab308" : "#ef4444";
 const colorClass = percentage >= 70 ? "text-pass" : percentage >= 50 ? "text-medium" : "text-fail";
@@ -2693,32 +2993,33 @@ const filledSegments = Math.round((percentage / 100) * 5);
             </div>
 
             {/* Summary Section */}
-            <div className="mt-4 border-t border-border pt-4">
-              <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Summary
-              </h4>
-              <p className="text-base leading-relaxed text-foreground">
-                {activeAnalysisTab === "income"
-                  ? `The Income & Expense section covers ${currentAnalysis.rules.length} rule categories with ${currentAnalysis.rules.reduce((acc, cat) => acc + cat.rules.length, 0)} individual rules. Key areas reviewed include Net Rental Income, Market Rent, Other Income, Occupancy, Operating Expenses, Insurance, Payroll, and Utilities. ${currentAnalysis.rules.reduce((acc, cat) => acc + cat.rules.filter((r) => r.status === "fail").length, 0)} rules require attention, primarily in areas related to insurance underwriting and expense trending assumptions.`
-                  : `The Valuation Analysis covers ${currentAnalysis.rules.length} rule categories with ${currentAnalysis.rules.reduce((acc, cat) => acc + cat.rules.length, 0)} individual rules. Key areas reviewed include Leverage Ratios (LTV), Debt Service Coverage (DSCR), Yield Metrics, and Break-Even Analysis. ${currentAnalysis.rules.reduce((acc, cat) => acc + cat.rules.filter((r) => r.status === "fail").length, 0)} rules require attention, with DSCR covenant compliance and break-even thresholds being primary concerns.`}
-              </p>
-            </div>
+            {activeAnalysisTab === "income" && (
+              <div className="mt-4 border-t border-border pt-4">
+                <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Summary
+                </h4>
+                <p className="text-base leading-relaxed text-foreground">
+                  {`The Income & Expense section covers ${currentAnalysis.rules.length} rule categories with ${currentAnalysis.rules.reduce((acc, cat) => acc + cat.rules.length, 0)} individual rules. Key areas reviewed include Net Rental Income, Market Rent, Other Income, Occupancy, Operating Expenses, Insurance, Payroll, and Utilities. ${currentAnalysis.rules.reduce((acc, cat) => acc + cat.rules.filter((r) => r.status === "fail").length, 0)} rules require attention, primarily in areas related to insurance underwriting and expense trending assumptions.`}
+                </p>
+              </div>
+            )}
           </div>
 
-          {currentAnalysis.rules.map((category) => (
-            <RuleCategorySection
-              key={category.name}
-              category={category}
-              isExpanded={expandedCategories[category.name] || false}
-              isInsightOpen={openInsights[category.name] || false}
-              isComparisonOpen={openComparisons[category.name] || false}
-              onToggleExpand={() => toggleExpanded(category.name)}
-              onToggleInsight={() => toggleInsight(category.name)}
-              onToggleComparison={() => toggleComparison(category.name)}
-              comments={comments[category.name] || {}}
-              onSaveComment={handleSaveComment}
-            />
-          ))}
+          {activeAnalysisTab === "income" &&
+            currentAnalysis.rules.map((category) => (
+              <RuleCategorySection
+                key={category.name}
+                category={category}
+                isExpanded={expandedCategories[category.name] || false}
+                isInsightOpen={openInsights[category.name] || false}
+                isComparisonOpen={openComparisons[category.name] || false}
+                onToggleExpand={() => toggleExpanded(category.name)}
+                onToggleInsight={() => toggleInsight(category.name)}
+                onToggleComparison={() => toggleComparison(category.name)}
+                comments={comments[category.name] || {}}
+                onSaveComment={handleSaveComment}
+              />
+            ))}
 
           {/* Additional Comments Section */}
           <div className="rounded-lg border border-border bg-muted/30 p-5">

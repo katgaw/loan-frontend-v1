@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 
 interface LoanTableProps {
   loans: Loan[];
-  onLoanClick: () => void;
+  onLoanClick: (loanId: string) => void;
   filtersSlot?: React.ReactNode;
 }
 
@@ -362,7 +362,7 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
             {sortedLoans.map((loan) => (
               <tr
                 key={loan.id}
-                onClick={onLoanClick}
+                onClick={() => onLoanClick(loan.id)}
                 className="cursor-pointer transition-colors hover:bg-accent/5"
               >
                 {/* Loan Info */}
@@ -371,7 +371,7 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onLoanClick();
+                        onLoanClick(loan.id);
                       }}
                       className="text-left font-mono text-sm font-semibold text-accent hover:underline"
                     >

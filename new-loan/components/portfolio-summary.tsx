@@ -1,7 +1,7 @@
 "use client";
 
 import { DollarSign, AlertTriangle, BarChart3 } from "lucide-react";
-import { portfolioSummary, loansData } from "@/lib/loan-data";
+import { loansData } from "@/lib/loan-data";
 
 function formatCurrency(value: number): string {
   if (value >= 1000000000) {
@@ -14,14 +14,21 @@ function formatCurrency(value: number): string {
 }
 
 export function PortfolioSummary() {
+  const totalUpb = loansData.reduce((acc, loan) => acc + loan.upb, 0);
+
   // Calculate percentage of rules compliant from compliance scores
   const totalPassed = loansData.reduce((acc, loan) => acc + loan.complianceScoreData.passed, 0);
   const totalRules = loansData.reduce((acc, loan) => acc + loan.complianceScoreData.total, 0);
-  const percentageCompliant = Math.round((totalPassed / totalRules) * 100);
+  const percentageCompliant = totalRules > 0 ? Math.round((totalPassed / totalRules) * 100) : 0;
 
   // Calculate percentage of rules failed
-  const totalFailed = loansData.reduce((acc, loan) => acc + loan.complianceScoreData.failed, 0);
-  const percentageFailed = Math.round((totalFailed / totalRules) * 100);
+  const totalFailed = loansData.reduce(
+    (acc, loan) => acc + Math.max(0, loan.complianceScoreData.total - loan.complianceScoreData.passed),
+    0
+  );
+  const percentageFailed = totalRules > 0 ? Math.round((totalFailed / totalRules) * 100) : 0;
+
+  const criticalLoans = loansData.filter((loan) => loan.riskScore >= 3).length;
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -38,7 +45,7 @@ export function PortfolioSummary() {
           <div>
             <p className="text-base text-muted-foreground">Total UPB</p>
             <p className="text-3xl font-bold text-foreground">
-              {formatCurrency(portfolioSummary.totalUPBAtRisk)}
+              {formatCurrency(totalUpb)}
             </p>
           </div>
         </div>
@@ -53,6 +60,9 @@ export function PortfolioSummary() {
             <p className="text-3xl font-bold text-foreground">
               {percentageCompliant}%
             </p>
+            <p className="text-sm text-muted-foreground">
+              {percentageFailed}% failed
+            </p>
           </div>
         </div>
 
@@ -64,7 +74,7 @@ export function PortfolioSummary() {
           <div>
             <p className="text-base text-muted-foreground">Critical Loans</p>
             <p className="text-3xl font-bold text-foreground">
-              {portfolioSummary.criticalLoans}
+              {criticalLoans}
             </p>
             <p className="text-sm text-muted-foreground">
               Loans requiring immediate action

@@ -1,0 +1,70 @@
+{"schema_version": "1.0.0",
+"metadata": {
+    "render_timestamp": "2026-02-04T12:00:00Z"
+},
+"render_status": "complete",
+"rule_results": {
+    "Income & Expense": {
+    "ruleId": [{
+        "ruleId": "1",
+        "textual_rule": "Rule 1",
+        "rule_type": "income_expense",
+        "rule_outcome": "Rule 1 description",
+        "rule_conformity": "pass"
+    },
+    {
+        "rule_id": "2",
+        "textual_rule": "Rule 2",
+        "rule_type": "income_expense",
+        "rule_outcome": "Rule 2 description",
+        "rule_conformity": "fail"
+    },
+    {
+        "rule_id": "3",
+        "textual_rule": "Rule 3",
+        "rule_type": "tax",
+        "rule_outcome": "Rule 3 description",
+        "rule_conformity": "pass"
+    }
+    ],
+    "summary": {
+        "fact_pattern_summary": "Fact pattern summary",
+        "lender_justification": "Lender justification summary",
+        "final_conclusion": "Final conclusion summary"
+    }
+}
+},
+"loan_summary":{
+    "loan_id":"1",
+    "borrower":"",
+    "property_type":"Multifamily",
+    "acquisition_date":"",
+    "commitment_date":"",
+    "lender_name":"",
+    "upb":"0.0",
+    "product_type":"",
+    "units":"0",
+    "city":"Bentonville",
+    "state":"VA",
+    "risk_score":"3",
+    "compliance_score":"10/20"
+},
+
+"risk_insights": {
+    "summary_narrative": "Summary narrative",
+    "key_risk_areas": ["Key risk areas","Key risk areas 2"]
+},
+
+"facts_lookup":{
+    "fact_loan_summary_031":{
+        "statement": "The property is located at 111 Non Street, Bentonville, VA 12345"
+    }
+},
+
+"Lender red flag":{
+    "question":["Question 1","Question 2"]
+},
+
+"Company red flag":{ 
+    "question":["Question 1","Question 2"]}   
+}

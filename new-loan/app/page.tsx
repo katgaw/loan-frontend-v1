@@ -9,11 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Menu, Bell, Search, User } from "lucide-react";
 import { Suspense } from "react";
 import Loading from "./loading";
+import { loansData } from "@/lib/loan-data";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"list" | "detail" | "redFlagReview">("list");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+
+  const handleTabChange = (tab: "list" | "detail") => {
+    if (tab === "detail" && selectedLoanId === null && loansData.length > 0) {
+      setSelectedLoanId(loansData[0]!.id);
+    }
+    setActiveTab(tab);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -21,7 +30,7 @@ export default function Home() {
       <div className="hidden lg:block">
         <AppSidebar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           isCollapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
@@ -34,7 +43,7 @@ export default function Home() {
             className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
-          <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <AppSidebar activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
       )}
 
@@ -72,8 +81,20 @@ export default function Home() {
         {/* Page Content */}
         <main className="p-4 lg:p-8">
           <Suspense fallback={<Loading />}>
-            {activeTab === "list" && <LoanListPage onNavigateToDetail={() => setActiveTab("detail")} />}
-            {activeTab === "detail" && <LoanDetailPage onNavigateToRedFlagReview={() => setActiveTab("redFlagReview")} />}
+            {activeTab === "list" && (
+              <LoanListPage
+                onNavigateToDetail={(loanId) => {
+                  setSelectedLoanId(loanId);
+                  setActiveTab("detail");
+                }}
+              />
+            )}
+            {activeTab === "detail" && (
+              <LoanDetailPage
+                loanId={selectedLoanId ?? undefined}
+                onNavigateToRedFlagReview={() => setActiveTab("redFlagReview")}
+              />
+            )}
             {activeTab === "redFlagReview" && <RedFlagReviewPage onBack={() => setActiveTab("detail")} />}
           </Suspense>
         </main>

@@ -8,7 +8,7 @@ import { PortfolioSummary } from "@/components/portfolio-summary";
 import { loansData } from "@/lib/loan-data";
 
 interface LoanListPageProps {
-  onNavigateToDetail: () => void;
+  onNavigateToDetail: (loanId: string) => void;
 }
 
 export function LoanListPage({ onNavigateToDetail }: LoanListPageProps) {

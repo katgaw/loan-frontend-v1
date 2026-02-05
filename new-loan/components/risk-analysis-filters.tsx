@@ -63,9 +63,9 @@ export function RiskAnalysisFilters({
         Filter and sort loans by various criteria
       </p>
 
-      <div className="flex flex-wrap items-center gap-4">
-        {/* Search Input */}
-        <div className="relative min-w-[280px] flex-1">
+      <div className="flex flex-col gap-4">
+        {/* Search Input (always above other controls) */}
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
@@ -76,6 +76,7 @@ export function RiskAnalysisFilters({
           />
         </div>
 
+        <div className="flex flex-wrap items-center gap-4">
         {/* Risk Score Filter */}
         <Select value={riskScoreFilter} onValueChange={onRiskScoreChange}>
           <SelectTrigger className="h-12 w-[150px] text-base">
@@ -167,6 +168,7 @@ export function RiskAnalysisFilters({
         </Select>
 
         
+        </div>
       </div>
     </div>
   );
