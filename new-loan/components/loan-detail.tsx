@@ -49,7 +49,10 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  if (!dateString) return "—";
+  const ms = Date.parse(dateString);
+  if (!Number.isFinite(ms)) return "—";
+  return new Date(ms).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -351,12 +354,14 @@ export function LoanDetail({ loan, onBack }: LoanDetailProps) {
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-muted-foreground">Lender</p>
-                <p className="font-medium text-foreground">{loan.lenderName}</p>
+                <p className="font-medium text-foreground">
+                  {loan.lenderName?.trim() ? loan.lenderName : "—"}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Acquisition Date</p>
                 <p className="font-medium text-foreground">
-                  {formatDate(loan.acquisitionDate)}
+                  {formatDate(loan.acquisitionDate ?? "")}
                 </p>
               </div>
               <div>

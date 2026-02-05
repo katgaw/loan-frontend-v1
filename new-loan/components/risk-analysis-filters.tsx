@@ -100,6 +100,7 @@ export function RiskAnalysisFilters({
             <SelectItem value="all" className="text-base">All TLR Status</SelectItem>
             <SelectItem value="TLR Completed" className="text-base">TLR Completed</SelectItem>
             <SelectItem value="TLR Not Completed" className="text-base">TLR Not Completed</SelectItem>
+            <SelectItem value="unknown" className="text-base">Unknown</SelectItem>
           </SelectContent>
         </Select>
 

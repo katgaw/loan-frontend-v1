@@ -4,7 +4,7 @@ import React from "react"
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import type { Loan } from "@/lib/loan-data";
+import { keyRiskAreaTitle, type Loan } from "@/lib/loan-data";
 import {
   Building2,
   Calendar,
@@ -118,7 +118,10 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  if (!dateString) return "—";
+  const ms = Date.parse(dateString);
+  if (!Number.isFinite(ms)) return "—";
+  return new Date(ms).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -194,12 +197,14 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
         comparison = a.loanNumber.localeCompare(b.loanNumber);
         break;
       case "acquisitionDate":
+        const aTime = a.acquisitionDate ? Date.parse(a.acquisitionDate) : Number.NaN;
+        const bTime = b.acquisitionDate ? Date.parse(b.acquisitionDate) : Number.NaN;
         comparison =
-          new Date(a.acquisitionDate).getTime() -
-          new Date(b.acquisitionDate).getTime();
+          (Number.isFinite(aTime) ? aTime : -Infinity) -
+          (Number.isFinite(bTime) ? bTime : -Infinity);
         break;
       case "lenderName":
-        comparison = a.lenderName.localeCompare(b.lenderName);
+        comparison = (a.lenderName ?? "").localeCompare(b.lenderName ?? "");
         break;
       case "propertyType":
         comparison = a.propertyType.localeCompare(b.propertyType);
@@ -379,17 +384,17 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
                     </button>
                     <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs">
                       <span className="font-medium text-foreground">Acq:</span>
-                      <span className="text-muted-foreground">{formatDate(loan.acquisitionDate)}</span>
+                      <span className="text-muted-foreground">{formatDate(loan.acquisitionDate ?? "")}</span>
                       <span className="font-medium text-foreground">Commit:</span>
-                      <span className="text-muted-foreground">{formatDate(loan.commitmentDate)}</span>
+                      <span className="text-muted-foreground">{formatDate(loan.commitmentDate ?? "")}</span>
                       <span className="font-medium text-foreground">Lender:</span>
-                      <span className="text-muted-foreground">{loan.lenderName}</span>
+                      <span className="text-muted-foreground">{loan.lenderName?.trim() ? loan.lenderName : "—"}</span>
                       <span className="font-medium text-foreground">UW:</span>
-                      <span className="text-muted-foreground">{loan.underwriterName}</span>
+                      <span className="text-muted-foreground">{loan.underwriterName?.trim() ? loan.underwriterName : "—"}</span>
                       <span className="font-medium text-foreground">Orig:</span>
-                      <span className="text-muted-foreground">{loan.originatorName}</span>
+                      <span className="text-muted-foreground">{loan.originatorName?.trim() ? loan.originatorName : "—"}</span>
                       <span className="font-medium text-foreground">Deleg:</span>
-                      <span className="text-muted-foreground">{loan.delegationType}</span>
+                      <span className="text-muted-foreground">{loan.delegationType ?? "—"}</span>
                     </div>
                   </div>
                 </td>
@@ -440,23 +445,14 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <p className="text-xs text-muted-foreground">DSCR</p>
-                        <p
-                          className={cn(
-                            "text-sm font-medium",
-                            loan.dscr < 1.0
-                              ? "text-fail"
-                              : loan.dscr < 1.2
-                                ? "text-medium"
-                                : "text-foreground"
-                          )}
-                        >
-                          {loan.dscr > 0 ? loan.dscr.toFixed(2) : "N/A"}
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {loan.dscr !== undefined && loan.dscr > 0 ? loan.dscr.toFixed(2) : "—"}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">LTV</p>
                         <p className="text-sm font-medium text-foreground">
-                          {loan.ltv.toFixed(1)}%
+                          {loan.ltv !== undefined ? `${loan.ltv.toFixed(1)}%` : "—"}
                         </p>
                       </div>
                     </div>
@@ -571,6 +567,11 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
                             <CheckCircle2 className="h-3.5 w-3.5 text-pass" />
                             <span className="text-xs font-medium text-pass">Completed</span>
                           </>
+                        ) : loan.tlrStatus === "unknown" || loan.tlrStatus === undefined ? (
+                          <>
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs font-medium text-muted-foreground">Unknown</span>
+                          </>
                         ) : (
                           <>
                             <Clock className="h-3.5 w-3.5 text-medium" />
@@ -628,18 +629,21 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
                       {loan.severity}
                     </span>
                     <div className="flex flex-col gap-1">
-                      {loan.rules.slice(0, 2).map((rule) => (
+                      {loan.keyRiskAreas.slice(0, 2).map((riskArea) => {
+                        const title = keyRiskAreaTitle(riskArea);
+                        return (
                         <span
-                          key={rule}
+                          key={riskArea}
                           className="flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
                         >
                           <AlertCircle className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{rule}</span>
+                          <span className="truncate">{title}</span>
                         </span>
-                      ))}
-                      {loan.rules.length > 2 && (
+                        );
+                      })}
+                      {loan.keyRiskAreas.length > 2 && (
                         <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                          +{loan.rules.length - 2} more
+                          +{loan.keyRiskAreas.length - 2} more
                         </span>
                       )}
                     </div>

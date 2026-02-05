@@ -5,7 +5,7 @@
 "render_status": "complete",
 "rule_results": {
     "Income & Expense": {
-    "ruleId": [{
+    "rules": [{
         "ruleId": "1",
         "textual_rule": "Rule 1",
         "rule_type": "income_expense",
@@ -47,7 +47,9 @@
     "city":"Bentonville",
     "state":"VA",
     "risk_score":"3",
-    "compliance_score":"10/20"
+    "compliance_score":"10/20",
+    "TLR_status":"unknown",
+    "DSCR":""
 },
 
 "risk_insights": {
@@ -58,6 +60,9 @@
 "facts_lookup":{
     "fact_loan_summary_031":{
         "statement": "The property is located at 111 Non Street, Bentonville, VA 12345"
+    },
+    "fact_loan_summary_017":{
+        "statement": "The LTV is 50% based on the appraised value of the property"
     }
 },
 

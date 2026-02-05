@@ -2379,17 +2379,6 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
 
   const baseLoanDetails = mappedLoanDetails ?? loanDetails;
 
-  const narrativeText = jsonRiskInsights?.summary_narrative?.trim();
-  const narrativeParagraphs =
-    narrativeText && narrativeText.length > 0
-      ? narrativeText.split(/\n\s*\n/).filter(Boolean)
-      : [summaryNarrative.overview, summaryNarrative.riskAssessment];
-
-  const keyRiskAreas =
-    jsonRiskInsights?.key_risk_areas && jsonRiskInsights.key_risk_areas.length > 0
-      ? jsonRiskInsights.key_risk_areas
-      : summaryNarrative.keyRiskAreas;
-
   const textOrDash = (value: unknown): string => {
     if (value === null || value === undefined) return "—";
     if (typeof value === "string") return value.trim() ? value : "—";
@@ -2415,6 +2404,22 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
     typeof jsonLoanNumberCandidate === "string" &&
     jsonLoanNumberCandidate !== "—" &&
     jsonLoanNumberCandidate === selectedLoan.loanNumber;
+
+  const narrativeText =
+    hasJsonLoanSummary ? jsonRiskInsights?.summary_narrative?.trim() : null;
+  const narrativeParagraphs =
+    narrativeText && narrativeText.length > 0
+      ? narrativeText.split(/\n\s*\n/).filter(Boolean)
+      : selectedLoan?.aiExplanation?.trim()
+        ? [selectedLoan.aiExplanation.trim()]
+        : [summaryNarrative.overview, summaryNarrative.riskAssessment];
+
+  const keyRiskAreas =
+    selectedLoan?.keyRiskAreas?.length
+      ? selectedLoan.keyRiskAreas
+      : hasJsonLoanSummary && jsonRiskInsights?.key_risk_areas && jsonRiskInsights.key_risk_areas.length > 0
+        ? jsonRiskInsights.key_risk_areas
+        : summaryNarrative.keyRiskAreas;
 
   const displayRiskScore = loanSummaryScores?.riskScore ?? baseLoanDetails.riskScore;
 
