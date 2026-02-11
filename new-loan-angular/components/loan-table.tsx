@@ -368,7 +368,7 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
               <tr
                 key={loan.id}
                 onClick={() => onLoanClick(loan.id)}
-                className="cursor-pointer transition-colors hover:bg-accent/5"
+                className="cursor-pointer transition-colors hover:bg-muted/50"
               >
                 {/* Loan Info */}
                 <td className="px-4 py-4 align-top">

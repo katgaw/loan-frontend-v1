@@ -117,48 +117,121 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
   for (const [sectionName, sectionValue] of Object.entries(ruleResults)) {
     if (!isRecord(sectionValue)) continue;
     const section = sectionValue as TestJsonRuleResultsSection;
-    const ruleList = (Array.isArray(section.ruleId) ? section.ruleId : Array.isArray(section.rules) ? section.rules : []) as TestJsonRuleResultsRule[];
-    const summary = isRecord(section.summary) ? (section.summary as TestJsonRuleResultsSummary) : undefined;
+    
+    // Check for new nested structure: rule_type_sections
+    const ruleTypeSections = section['rule_type_sections'];
+    if (isRecord(ruleTypeSections)) {
+      // New structure: rule_results.Income & Expenses.rule_type_sections.{other_income, other_expenses}
+      const categories: UiRuleCategory[] = [];
+      
+      for (const [ruleTypeKey, ruleTypeValue] of Object.entries(ruleTypeSections)) {
+        if (!isRecord(ruleTypeValue)) continue;
+        const ruleTypeSection = ruleTypeValue as TestJsonRuleResultsSection;
+        
+        // Get rules from this rule_type_section
+        const ruleList = (Array.isArray(ruleTypeSection.ruleId) 
+          ? ruleTypeSection.ruleId 
+          : Array.isArray(ruleTypeSection.rules) 
+            ? ruleTypeSection.rules 
+            : []) as TestJsonRuleResultsRule[];
+        
+        // Get summary from this rule_type_section
+        const summary = isRecord(ruleTypeSection.summary) 
+          ? (ruleTypeSection.summary as TestJsonRuleResultsSummary) 
+          : undefined;
+        
+        // Get rule type name - prefer rule_type_name, fallback to rule_type_id, then normalize the key
+        const ruleTypeName = typeof ruleTypeSection['rule_type_name'] === 'string' && ruleTypeSection['rule_type_name'].trim()
+          ? ruleTypeSection['rule_type_name']
+          : typeof ruleTypeSection['rule_type_id'] === 'string' && ruleTypeSection['rule_type_id'].trim()
+            ? normalizeRuleTypeName(ruleTypeSection['rule_type_id'])
+            : normalizeRuleTypeName(ruleTypeKey);
+        
+        const rules: UiRule[] = [];
+        for (const r of ruleList) {
+          if (!isRecord(r)) continue;
+          const rr = r as TestJsonRuleResultsRule;
+          const status = normalizeStatus(rr.rule_conformity);
+          const uiRule: UiRule = {
+            ruleId: normalizeRuleId(rr),
+            name: (typeof rr.textual_rule === "string" && rr.textual_rule.trim()) ? rr.textual_rule : "Untitled Rule",
+            description: (typeof rr.rule_outcome === "string" && rr.rule_outcome.trim()) ? rr.rule_outcome : "No rule outcome provided.",
+            status,
+            riskScore: statusToRiskScore(status),
+            subrules: [],
+          };
+          rules.push(uiRule);
+        }
+        
+        const insightObservations = summary?.fact_pattern_summary ? [summary.fact_pattern_summary] : [];
+        const lenderJustification = summary?.lender_justification ? [summary.lender_justification] : [];
+        const finalConclusion = summary?.final_conclusion ? [summary.final_conclusion] : [];
+        
+        categories.push({
+          name: ruleTypeName,
+          rules,
+          insight: {
+            factPattern: {
+              facts: [],
+              observations: insightObservations,
+            },
+            lenderJustification,
+            finalConclusion,
+          },
+          comparison: {
+            lenderNarrative: "Not provided in rule_results.",
+            appraisalData: "Not provided in rule_results.",
+            businessRuleOutcome: "See individual rule outcomes by expanding a rule.",
+          },
+        });
+      }
+      
+      out[sectionName] = categories;
+    } else {
+      // Old structure: rule_results.Income & Expense.rules[] (backward compatibility)
+      const ruleList = (Array.isArray(section.ruleId) ? section.ruleId : Array.isArray(section.rules) ? section.rules : []) as TestJsonRuleResultsRule[];
+      const summary = isRecord(section.summary) ? (section.summary as TestJsonRuleResultsSummary) : undefined;
 
-    const grouped: Record<string, UiRule[]> = {};
-    for (const r of ruleList) {
-      if (!isRecord(r)) continue;
-      const rr = r as TestJsonRuleResultsRule;
-      const typeName = normalizeRuleTypeName(rr.rule_type);
-      const status = normalizeStatus(rr.rule_conformity);
-      const uiRule: UiRule = {
-        ruleId: normalizeRuleId(rr),
-        name: (typeof rr.textual_rule === "string" && rr.textual_rule.trim()) ? rr.textual_rule : "Untitled Rule",
-        description: (typeof rr.rule_outcome === "string" && rr.rule_outcome.trim()) ? rr.rule_outcome : "No rule outcome provided.",
-        status,
-        riskScore: statusToRiskScore(status),
-        subrules: [],
-      };
-      grouped[typeName] = grouped[typeName] ?? [];
-      grouped[typeName].push(uiRule);
-    }
+      const grouped: Record<string, UiRule[]> = {};
+      for (const r of ruleList) {
+        if (!isRecord(r)) continue;
+        const rr = r as TestJsonRuleResultsRule;
+        const typeName = normalizeRuleTypeName(rr.rule_type);
+        const status = normalizeStatus(rr.rule_conformity);
+        const uiRule: UiRule = {
+          ruleId: normalizeRuleId(rr),
+          name: (typeof rr.textual_rule === "string" && rr.textual_rule.trim()) ? rr.textual_rule : "Untitled Rule",
+          description: (typeof rr.rule_outcome === "string" && rr.rule_outcome.trim()) ? rr.rule_outcome : "No rule outcome provided.",
+          status,
+          riskScore: statusToRiskScore(status),
+          subrules: [],
+        };
+        grouped[typeName] = grouped[typeName] ?? [];
+        grouped[typeName].push(uiRule);
+      }
 
-    const insightObservations = summary?.fact_pattern_summary ? [summary.fact_pattern_summary] : [];
-    const lenderJustification = summary?.lender_justification ? [summary.lender_justification] : [];
-    const finalConclusion = summary?.final_conclusion ? [summary.final_conclusion] : [];
+      const insightObservations = summary?.fact_pattern_summary ? [summary.fact_pattern_summary] : [];
+      const lenderJustification = summary?.lender_justification ? [summary.lender_justification] : [];
+      const finalConclusion = summary?.final_conclusion ? [summary.final_conclusion] : [];
 
-    out[sectionName] = Object.entries(grouped).map(([ruleTypeName, rules]) => ({
-      name: ruleTypeName,
-      rules,
-      insight: {
-        factPattern: {
-          facts: [],
-          observations: insightObservations,
+      out[sectionName] = Object.entries(grouped).map(([ruleTypeName, rules]) => ({
+        name: ruleTypeName,
+        rules,
+        insight: {
+          factPattern: {
+            facts: [],
+            observations: insightObservations,
+          },
+          lenderJustification,
+          finalConclusion,
         },
-        lenderJustification,
-        finalConclusion,
-      },
-      comparison: {
-        lenderNarrative: "Not provided in rule_results.",
-        appraisalData: "Not provided in rule_results.",
-        businessRuleOutcome: "See individual rule outcomes by expanding a rule.",
-      },
-    }));
+        comparison: {
+          lenderNarrative: "Not provided in rule_results.",
+          appraisalData: "Not provided in rule_results.",
+          businessRuleOutcome: "See individual rule outcomes by expanding a rule.",
+        },
+      }));
+    }
   }
 
   return out;

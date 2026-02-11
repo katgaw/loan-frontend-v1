@@ -200,13 +200,16 @@ export class LoanListPageComponent implements OnInit {
 
   private extractLTVFromFacts(data: unknown): number | undefined {
     if (!data || typeof data !== 'object') return undefined;
-    const factsLookup = (data as Record<string, unknown>)['facts_lookup'];
+    // Handle both "facts_lookup" (correct) and "facts_loodkup" (typo in test.json)
+    const factsLookup = (data as Record<string, unknown>)['facts_lookup'] || 
+                        (data as Record<string, unknown>)['facts_loodkup'];
     if (!factsLookup || typeof factsLookup !== 'object') return undefined;
     const factLoanSummary017 = (factsLookup as Record<string, unknown>)['fact_loan_summary_017'];
     if (!factLoanSummary017 || typeof factLoanSummary017 !== 'object') return undefined;
     const statement = (factLoanSummary017 as Record<string, unknown>)['statement'];
     if (typeof statement !== 'string') return undefined;
     
+    // Extract LTV percentage from statement like "The LTV is 50% based on the appraised value of the property"
     const match = statement.match(/LTV\s+is\s+(\d+(?:\.\d+)?)%/i);
     if (match && match[1]) {
       const value = parseFloat(match[1]);
@@ -231,19 +234,24 @@ export class LoanListPageComponent implements OnInit {
       dscr?: number;
     } = {};
     
-    const tlrStatusValue = summary['TLR_status'];
+    // Handle both "status" (test_new.json) and "TLR_status" (test.json) for backward compatibility
+    const tlrStatusValue = summary['status'] || summary['TLR_status'];
     if (typeof tlrStatusValue === 'string') {
       if (tlrStatusValue === 'unknown' || tlrStatusValue === 'TLR Completed' || tlrStatusValue === 'TLR Not Completed') {
         result.tlrStatus = tlrStatusValue as 'TLR Completed' | 'TLR Not Completed' | 'unknown';
       }
     }
     
+    // Extract DSCR
     const dscrValue = summary['DSCR'];
     if (typeof dscrValue === 'string' && dscrValue.trim() !== '') {
       const parsed = parseFloat(dscrValue);
       if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
         result.dscr = parsed;
       }
+    } else if (dscrValue === '' || dscrValue === null || dscrValue === undefined) {
+      // Empty string means no information, so leave dscr undefined
+      result.dscr = undefined;
     }
     
     return result;

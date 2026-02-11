@@ -2672,67 +2672,6 @@ const analysisData = {
             <p className="text-base font-semibold text-foreground">{displayedLoanDetails.borrower}</p>
           </div>
           <div className="space-y-1.5">
-            <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Risk Score</p>
-            <div className="flex items-center gap-3">
-              {/* Gauge/Meter Arc Icon */}
-              <svg width="48" height="30" viewBox="0 0 36 22" className="flex-shrink-0">
-                {/* Arc background segments */}
-                <path
-                  d="M 4 20 A 14 14 0 0 1 10 8"
-                  fill="none"
-                  stroke={displayRiskScore === 1 ? "#22c55e" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 11 7 A 14 14 0 0 1 18 5"
-                  fill="none"
-                  stroke={displayRiskScore <= 2 ? "#22c55e" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 19 5 A 14 14 0 0 1 26 7"
-                  fill="none"
-                  stroke={displayRiskScore === 3 ? "#eab308" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 27 8 A 14 14 0 0 1 32 20"
-                  fill="none"
-                  stroke={displayRiskScore === 4 ? "#ef4444" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                {/* Needle */}
-                <line
-                  x1="18"
-                  y1="20"
-                  x2={displayRiskScore === 1 ? 8 : displayRiskScore === 2 ? 13 : displayRiskScore === 3 ? 23 : 28}
-                  y2={displayRiskScore === 1 ? 12 : displayRiskScore === 2 ? 7 : displayRiskScore === 3 ? 7 : 12}
-                  stroke={displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                {/* Center dot */}
-                <circle 
-                  cx="18" 
-                  cy="20" 
-                  r="2.5" 
-                  fill={displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"} 
-                />
-              </svg>
-              <span className={cn(
-                "text-2xl font-bold",
-                displayRiskScore <= 2 ? "text-pass" : 
-                displayRiskScore === 3 ? "text-medium" : "text-fail"
-              )}>
-                {displayRiskScore}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Compliance Score</p>
             {(() => {
               const fallbackPassed =
@@ -2882,76 +2821,11 @@ const analysisData = {
 
         {/* Tab Content */}
         <div className="space-y-6">
-          {/* Header with Risk Score and Compliance Score */}
+          {/* Header with Compliance Score */}
           <div className="rounded-lg border border-border bg-muted/30 p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h3 className="text-xl font-semibold text-foreground">{currentAnalysis?.title || "Analysis"}</h3>
               <div className="flex flex-wrap items-center gap-6">
-                {/* Risk Score */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Risk Score:</span>
-                  {(() => {
-                    const riskScore = displayRiskScore;
-                    const fillColor = riskScore <= 2 ? "#22c55e" : riskScore === 3 ? "#eab308" : "#ef4444";
-                    return (
-                      <div className="flex items-center gap-2">
-                        {/* Gauge/Meter Arc Icon */}
-                        <svg width="36" height="22" viewBox="0 0 36 22" className="flex-shrink-0">
-                          <path
-                            d="M 4 20 A 14 14 0 0 1 10 8"
-                            fill="none"
-                            stroke={riskScore === 1 ? "#22c55e" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M 11 7 A 14 14 0 0 1 18 5"
-                            fill="none"
-                            stroke={riskScore <= 2 ? "#22c55e" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M 19 5 A 14 14 0 0 1 26 7"
-                            fill="none"
-                            stroke={riskScore === 3 ? "#eab308" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M 27 8 A 14 14 0 0 1 32 20"
-                            fill="none"
-                            stroke={riskScore === 4 ? "#ef4444" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <line
-                            x1="18"
-                            y1="20"
-                            x2={riskScore === 1 ? 8 : riskScore === 2 ? 13 : riskScore === 3 ? 23 : 28}
-                            y2={riskScore === 1 ? 12 : riskScore === 2 ? 7 : riskScore === 3 ? 7 : 12}
-                            stroke={fillColor}
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                          <circle cx="18" cy="20" r="2.5" fill={fillColor} />
-                        </svg>
-                        <span
-                          className={cn(
-                            "text-lg font-bold",
-                            riskScore <= 2
-                              ? "text-pass"
-                              : riskScore === 3
-                                ? "text-medium"
-                                : "text-fail"
-                          )}
-                        >
-                          {riskScore}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </div>
                 {/* Compliance Score */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Compliance Score:</span>

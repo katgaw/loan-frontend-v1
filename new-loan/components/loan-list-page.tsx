@@ -34,6 +34,7 @@ function extractLTVFromFacts(data: unknown): number | undefined {
 function extractFromLoanSummary(data: unknown): {
   tlrStatus?: "TLR Completed" | "TLR Not Completed" | "unknown";
   dscr?: number;
+  upb?: number;
 } {
   if (!data || typeof data !== "object") return {};
   const loanSummary = (data as Record<string, unknown>)["loan_summary"];
@@ -43,6 +44,7 @@ function extractFromLoanSummary(data: unknown): {
   const result: {
     tlrStatus?: "TLR Completed" | "TLR Not Completed" | "unknown";
     dscr?: number;
+    upb?: number;
   } = {};
   
   // Extract TLR_status
@@ -63,6 +65,17 @@ function extractFromLoanSummary(data: unknown): {
   } else if (dscrValue === "" || dscrValue === null || dscrValue === undefined) {
     // Empty string means no information, so leave dscr undefined
     result.dscr = undefined;
+  }
+  
+  // Extract UPB
+  const upbValue = summary["upb"];
+  if (typeof upbValue === "string" && upbValue.trim() !== "") {
+    const parsed = parseFloat(upbValue);
+    if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+      result.upb = parsed;
+    }
+  } else if (typeof upbValue === "number" && Number.isFinite(upbValue)) {
+    result.upb = upbValue;
   }
   
   return result;
@@ -91,7 +104,7 @@ export function LoanListPage({ onNavigateToDetail }: LoanListPageProps) {
       .then((data) => {
         if (!isMounted) return;
         const ltv = extractLTVFromFacts(data);
-        const { tlrStatus, dscr } = extractFromLoanSummary(data);
+        const { tlrStatus, dscr, upb } = extractFromLoanSummary(data);
         
         setLoansWithLTV((prevLoans) =>
           prevLoans.map((loan) => ({
@@ -99,6 +112,7 @@ export function LoanListPage({ onNavigateToDetail }: LoanListPageProps) {
             ...(ltv !== undefined && { ltv }),
             ...(tlrStatus !== undefined && { tlrStatus }),
             ...(dscr !== undefined ? { dscr } : { dscr: undefined }),
+            ...(upb !== undefined && { upb }),
           }))
         );
       })

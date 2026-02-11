@@ -156,15 +156,15 @@ const displayText = useMemo(() => {
         <Button
           variant="outline"
           className={cn(
-            "h-12 min-w-[200px] justify-start gap-2 text-base font-normal bg-transparent",
+            "h-8 min-w-[155px] justify-start gap-1.5 text-xs font-normal bg-transparent",
             !hasSelection && "text-muted-foreground"
           )}
         >
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="flex-1 text-left">{displayText}</span>
           {hasSelection && (
             <X 
-              className="h-4 w-4 text-muted-foreground hover:text-foreground" 
+              className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" 
               onClick={handleClear}
             />
           )}

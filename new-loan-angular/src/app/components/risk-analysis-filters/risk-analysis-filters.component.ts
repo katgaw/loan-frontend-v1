@@ -34,14 +34,14 @@ import { DateRange } from '../date-range-picker/date-range-picker.component';
             ></app-input>
         </div>
 
-        <div class="flex flex-wrap items-center gap-4">
+        <div class="flex flex-wrap items-center gap-1.5">
           <!-- Risk Score Filter -->
           <app-select
             [options]="riskScoreOptions"
             [value]="riskScoreFilter"
             (valueChange)="handleRiskScoreChange($event)"
             placeholder="Risk Score"
-            className="h-12 w-[150px] text-base"
+            className="h-8 w-[125px] text-xs"
           ></app-select>
 
           <!-- TLR Status Filter -->
@@ -50,7 +50,7 @@ import { DateRange } from '../date-range-picker/date-range-picker.component';
             [value]="tlrStatusFilter"
             (valueChange)="handleTlrStatusChange($event)"
             placeholder="TLR Status"
-            className="h-12 w-[180px] text-base"
+            className="h-8 w-[130px] text-xs"
           ></app-select>
 
           <!-- Credit Delegation Type Filter -->
@@ -59,7 +59,7 @@ import { DateRange } from '../date-range-picker/date-range-picker.component';
             [value]="delegationFilter"
             (valueChange)="handleDelegationChange($event)"
             placeholder="Delegation Type"
-            className="h-12 w-[180px] text-base"
+            className="h-8 w-[130px] text-xs"
           ></app-select>
 
           <!-- Lender Filter -->
@@ -68,7 +68,7 @@ import { DateRange } from '../date-range-picker/date-range-picker.component';
             [value]="lenderFilter"
             (valueChange)="handleLenderChange($event)"
             placeholder="All Lenders"
-            className="h-12 w-[180px] text-base"
+            className="h-8 w-[120px] text-xs"
           ></app-select>
 
           <!-- Acquisition Date Range Filter -->
@@ -91,7 +91,7 @@ import { DateRange } from '../date-range-picker/date-range-picker.component';
             [value]="underwriterFilter"
             (valueChange)="handleUnderwriterChange($event)"
             placeholder="Underwriter"
-            className="h-12 w-[170px] text-base"
+            className="h-8 w-[135px] text-xs"
           ></app-select>
 
           <!-- Originator Filter -->
@@ -100,7 +100,7 @@ import { DateRange } from '../date-range-picker/date-range-picker.component';
             [value]="originatorFilter"
             (valueChange)="handleOriginatorChange($event)"
             placeholder="Originator"
-            className="h-12 w-[170px] text-base"
+            className="h-8 w-[130px] text-xs"
           ></app-select>
         </div>
       </div>

@@ -98,12 +98,13 @@ export class RiskScorePieChartComponent {
 
       <div class="grid gap-4 sm:grid-cols-2">
         <div
-          [class]="cn('relative overflow-hidden rounded-lg border p-5 transition-all hover:shadow-md', severityStyles[item.severity])"
+          class="relative overflow-hidden rounded-lg border p-5 transition-all hover:shadow-md bg-purple-50/50 border-purple-100"
         >
           <div class="mb-3">
-            <div class="rounded-lg bg-background/50 p-2 w-fit">
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <div class="rounded-lg bg-purple-600 p-2 w-fit">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <line x1="12" x2="12" y1="2" y2="22"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
               </svg>
             </div>
           </div>

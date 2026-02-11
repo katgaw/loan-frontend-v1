@@ -1623,6 +1623,13 @@ function CircularProgressRing({
   const offset = circumference - (percentage / 100) * circumference;
 
   const getColor = () => {
+    // Risk score specific colors (when maxScore is 4)
+    if (maxScore === 4) {
+      if (score <= 2) return "#22c55e"; // green for scores 1-2
+      if (score === 3) return "#eab308"; // yellow for score 3
+      return "#ef4444"; // red for score 4
+    }
+    // Default percentage-based colors
     if (percentage >= 70) return "#10b981"; // pass color
     if (percentage >= 50) return "#f59e0b"; // medium color
     return "#ef4444"; // fail color
@@ -1654,6 +1661,84 @@ function CircularProgressRing({
         />
       </svg>
     </div>
+  );
+}
+
+function SemicircularProgressBar({
+  score,
+  maxScore,
+  size = 80,
+  strokeWidth = 8,
+}: {
+  score: number;
+  maxScore: number;
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const percentage = (score / maxScore) * 100;
+  const radius = (size - strokeWidth) / 2;
+  const centerX = size / 2;
+  const centerY = size / 2;
+  
+  // Full circle circumference, but we only show half (semicircle)
+  const circumference = 2 * Math.PI * radius;
+  const semicircleLength = circumference / 2;
+  const offset = semicircleLength - (percentage / 100) * semicircleLength;
+
+  const getColor = () => {
+    // Risk score specific colors (when maxScore is 4)
+    if (maxScore === 4) {
+      if (score <= 2) return "#22c55e"; // green for scores 1-2
+      if (score === 3) return "#eab308"; // yellow for score 3
+      return "#ef4444"; // red for score 4
+    }
+    // Default percentage-based colors
+    if (percentage >= 70) return "#10b981"; // pass color
+    if (percentage >= 50) return "#f59e0b"; // medium color
+    return "#ef4444"; // fail color
+  };
+
+  const clipPathId = `semicircle-mask-${score}-${maxScore}`;
+
+  return (
+    <svg 
+      width={size} 
+      height={size / 2 + strokeWidth / 2} 
+      viewBox={`0 0 ${size} ${size}`}
+      className="overflow-visible flex-shrink-0"
+    >
+      <defs>
+        <clipPath id={clipPathId}>
+          <rect x="0" y="0" width={size} height={centerY + strokeWidth / 2} />
+        </clipPath>
+      </defs>
+      {/* Background circle (unfilled) - clipped to show only top half */}
+      <circle
+        cx={centerX}
+        cy={centerY}
+        r={radius}
+        fill="none"
+        stroke="#e5e7eb"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        clipPath={`url(#${clipPathId})`}
+      />
+      {/* Filled circle - clipped to show only top half, rotated to start from left */}
+      <circle
+        cx={centerX}
+        cy={centerY}
+        r={radius}
+        fill="none"
+        stroke={getColor()}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={semicircleLength}
+        strokeDashoffset={offset}
+        clipPath={`url(#${clipPathId})`}
+        className="transition-all duration-300"
+        transform={`rotate(-90 ${centerX} ${centerY})`}
+      />
+    </svg>
   );
 }
 
@@ -2674,60 +2759,19 @@ const analysisData = {
           <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Risk Score</p>
             <div className="flex items-center gap-3">
-              {/* Gauge/Meter Arc Icon */}
-              <svg width="48" height="30" viewBox="0 0 36 22" className="flex-shrink-0">
-                {/* Arc background segments */}
-                <path
-                  d="M 4 20 A 14 14 0 0 1 10 8"
-                  fill="none"
-                  stroke={displayRiskScore === 1 ? "#22c55e" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 11 7 A 14 14 0 0 1 18 5"
-                  fill="none"
-                  stroke={displayRiskScore <= 2 ? "#22c55e" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 19 5 A 14 14 0 0 1 26 7"
-                  fill="none"
-                  stroke={displayRiskScore === 3 ? "#eab308" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 27 8 A 14 14 0 0 1 32 20"
-                  fill="none"
-                  stroke={displayRiskScore === 4 ? "#ef4444" : "#e5e7eb"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                {/* Needle */}
-                <line
-                  x1="18"
-                  y1="20"
-                  x2={displayRiskScore === 1 ? 8 : displayRiskScore === 2 ? 13 : displayRiskScore === 3 ? 23 : 28}
-                  y2={displayRiskScore === 1 ? 12 : displayRiskScore === 2 ? 7 : displayRiskScore === 3 ? 7 : 12}
-                  stroke={displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                {/* Center dot */}
-                <circle 
-                  cx="18" 
-                  cy="20" 
-                  r="2.5" 
-                  fill={displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"} 
-                />
-              </svg>
-              <span className={cn(
-                "text-2xl font-bold",
-                displayRiskScore <= 2 ? "text-pass" : 
-                displayRiskScore === 3 ? "text-medium" : "text-fail"
-              )}>
+              {/* Semicircular Progress Bar */}
+              <SemicircularProgressBar
+                score={displayRiskScore}
+                maxScore={4}
+                size={80}
+                strokeWidth={8}
+              />
+              <span
+                className="text-lg font-bold"
+                style={{
+                  color: displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"
+                }}
+              >
                 {displayRiskScore}
               </span>
             </div>
@@ -2890,67 +2934,23 @@ const analysisData = {
                 {/* Risk Score */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Risk Score:</span>
-                  {(() => {
-                    const riskScore = displayRiskScore;
-                    const fillColor = riskScore <= 2 ? "#22c55e" : riskScore === 3 ? "#eab308" : "#ef4444";
-                    return (
-                      <div className="flex items-center gap-2">
-                        {/* Gauge/Meter Arc Icon */}
-                        <svg width="36" height="22" viewBox="0 0 36 22" className="flex-shrink-0">
-                          <path
-                            d="M 4 20 A 14 14 0 0 1 10 8"
-                            fill="none"
-                            stroke={riskScore === 1 ? "#22c55e" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M 11 7 A 14 14 0 0 1 18 5"
-                            fill="none"
-                            stroke={riskScore <= 2 ? "#22c55e" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M 19 5 A 14 14 0 0 1 26 7"
-                            fill="none"
-                            stroke={riskScore === 3 ? "#eab308" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <path
-                            d="M 27 8 A 14 14 0 0 1 32 20"
-                            fill="none"
-                            stroke={riskScore === 4 ? "#ef4444" : "#e5e7eb"}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                          <line
-                            x1="18"
-                            y1="20"
-                            x2={riskScore === 1 ? 8 : riskScore === 2 ? 13 : riskScore === 3 ? 23 : 28}
-                            y2={riskScore === 1 ? 12 : riskScore === 2 ? 7 : riskScore === 3 ? 7 : 12}
-                            stroke={fillColor}
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                          <circle cx="18" cy="20" r="2.5" fill={fillColor} />
-                        </svg>
-                        <span
-                          className={cn(
-                            "text-lg font-bold",
-                            riskScore <= 2
-                              ? "text-pass"
-                              : riskScore === 3
-                                ? "text-medium"
-                                : "text-fail"
-                          )}
-                        >
-                          {riskScore}
-                        </span>
-                      </div>
-                    );
-                  })()}
+                  <div className="flex items-center gap-2">
+                    {/* Semicircular Progress Bar */}
+                    <SemicircularProgressBar
+                      score={displayRiskScore}
+                      maxScore={4}
+                      size={80}
+                      strokeWidth={8}
+                    />
+                    <span
+                      className="text-lg font-bold"
+                      style={{
+                        color: displayRiskScore <= 2 ? "#22c55e" : displayRiskScore === 3 ? "#eab308" : "#ef4444"
+                      }}
+                    >
+                      {displayRiskScore}
+                    </span>
+                  </div>
                 </div>
                 {/* Compliance Score */}
                 <div className="flex items-center gap-2">

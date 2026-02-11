@@ -69,7 +69,9 @@ interface RuleCategory {
 
 function pickLoanSummaryStatement(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
-  const factsLookup = (data as Record<string, unknown>)["facts_lookup"];
+  // Handle both "facts_lookup" (correct) and "facts_loodkup" (typo in test.json)
+  const factsLookup = (data as Record<string, unknown>)["facts_lookup"] || 
+                      (data as Record<string, unknown>)["facts_loodkup"];
   if (!factsLookup || typeof factsLookup !== "object") return null;
   const factLoanSummary031 = (factsLookup as Record<string, unknown>)["fact_loan_summary_031"];
   if (!factLoanSummary031 || typeof factLoanSummary031 !== "object") return null;
@@ -225,35 +227,53 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                 <p class="mt-1 text-base font-bold text-foreground">{{ formatDate(loan.commitmentDate ?? '') }}</p>
               </div>
               <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk Score</p>
-                <div class="mt-1 flex items-center gap-2">
-                  <p class="text-base font-bold text-foreground">{{ loan.riskScore }}</p>
-                  <div class="relative h-8 w-16">
-                    <svg class="h-8 w-16" viewBox="0 0 64 32">
-                      <path d="M 4 28 A 28 28 0 0 1 60 28" fill="none" stroke="#e5e7eb" stroke-width="4" stroke-linecap="round"/>
-                      <path 
-                        [attr.d]="getRiskScorePath(loan.riskScore)"
-                        fill="none" 
-                        stroke="#fbbf24" 
-                        stroke-width="4" 
-                        stroke-linecap="round"
-                      />
-                      <line 
-                        [attr.x1]="getRiskScoreNeedleX(loan.riskScore)"
-                        [attr.y1]="getRiskScoreNeedleY(loan.riskScore)"
-                        x2="32"
-                        y2="28"
-                        stroke="#374151"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Units</p>
                 <p class="mt-1 text-base font-bold text-foreground">{{ loan.units }}</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk Score</p>
+                <div class="mt-1 flex items-center gap-3">
+                  <!-- Semicircular Progress Bar -->
+                  <svg width="80" height="48" viewBox="0 0 80 80" class="overflow-visible flex-shrink-0">
+                    <defs>
+                      <clipPath [id]="'semicircle-mask-' + loan.id + '-' + loan.riskScore">
+                        <rect x="0" y="0" width="80" height="44"></rect>
+                      </clipPath>
+                    </defs>
+                    <!-- Background circle (unfilled) - clipped to show only top half -->
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="36"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      stroke-width="8"
+                      stroke-linecap="round"
+                      [attr.clip-path]="'url(#semicircle-mask-' + loan.id + '-' + loan.riskScore + ')'"
+                    ></circle>
+                    <!-- Filled circle - clipped to show only top half, rotated to start from left -->
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="36"
+                      fill="none"
+                      [attr.stroke]="getRiskScoreColor(loan.riskScore)"
+                      stroke-width="8"
+                      stroke-linecap="round"
+                      [attr.stroke-dasharray]="getSemicircleLength()"
+                      [attr.stroke-dashoffset]="getRiskScoreOffset(loan.riskScore)"
+                      [attr.clip-path]="'url(#semicircle-mask-' + loan.id + '-' + loan.riskScore + ')'"
+                      class="transition-all duration-300"
+                      transform="rotate(-90 40 40)"
+                    ></circle>
+                  </svg>
+                  <span
+                    class="text-lg font-bold"
+                    [style.color]="getRiskScoreColor(loan.riskScore)"
+                  >
+                    {{ loan.riskScore }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -350,58 +370,60 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                   <div class="flex flex-wrap items-center justify-between gap-4">
                     <h3 class="text-xl font-semibold text-foreground">{{ getCurrentTabTitle() }}</h3>
                     <div class="flex flex-wrap items-center gap-6">
-                      <!-- Risk Score -->
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm text-muted-foreground">Risk Score:</span>
+                      @if (activeTab() === 'income') {
+                        <!-- Risk Score -->
                         <div class="flex items-center gap-2">
-                          <svg width="36" height="22" viewBox="0 0 36 22" class="flex-shrink-0">
-                            <path
-                              d="M 4 20 A 14 14 0 0 1 10 8"
-                              fill="none"
-                              [attr.stroke]="loan.riskScore === 1 ? '#22c55e' : '#e5e7eb'"
-                              stroke-width="3"
-                              stroke-linecap="round"
-                            />
-                            <path
-                              d="M 11 7 A 14 14 0 0 1 18 5"
-                              fill="none"
-                              [attr.stroke]="loan.riskScore <= 2 ? '#22c55e' : '#e5e7eb'"
-                              stroke-width="3"
-                              stroke-linecap="round"
-                            />
-                            <path
-                              d="M 19 5 A 14 14 0 0 1 26 7"
-                              fill="none"
-                              [attr.stroke]="loan.riskScore === 3 ? '#eab308' : '#e5e7eb'"
-                              stroke-width="3"
-                              stroke-linecap="round"
-                            />
-                            <path
-                              d="M 27 8 A 14 14 0 0 1 32 20"
-                              fill="none"
-                              [attr.stroke]="loan.riskScore === 4 ? '#ef4444' : '#e5e7eb'"
-                              stroke-width="3"
-                              stroke-linecap="round"
-                            />
-                            <line
-                              x1="18"
-                              y1="20"
-                              [attr.x2]="getSmallGaugeNeedleX(loan.riskScore)"
-                              [attr.y2]="getSmallGaugeNeedleY(loan.riskScore)"
-                              [attr.stroke]="getRiskScoreColor(loan.riskScore)"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                            />
-                            <circle cx="18" cy="20" r="2.5" [attr.fill]="getRiskScoreColor(loan.riskScore)" />
-                          </svg>
-                          <span [class]="cn(
-                            'text-lg font-bold',
-                            loan.riskScore <= 2 ? 'text-pass' : loan.riskScore === 3 ? 'text-medium' : 'text-fail'
-                          )">
-                            {{ loan.riskScore }}
-                          </span>
+                          <span class="text-sm text-muted-foreground">Risk Score:</span>
+                          <div class="flex items-center gap-2">
+                            <svg width="36" height="22" viewBox="0 0 36 22" class="flex-shrink-0">
+                              <path
+                                d="M 4 20 A 14 14 0 0 1 10 8"
+                                fill="none"
+                                [attr.stroke]="loan.riskScore === 1 ? '#22c55e' : '#e5e7eb'"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                              />
+                              <path
+                                d="M 11 7 A 14 14 0 0 1 18 5"
+                                fill="none"
+                                [attr.stroke]="loan.riskScore <= 2 ? '#22c55e' : '#e5e7eb'"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                              />
+                              <path
+                                d="M 19 5 A 14 14 0 0 1 26 7"
+                                fill="none"
+                                [attr.stroke]="loan.riskScore === 3 ? '#eab308' : '#e5e7eb'"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                              />
+                              <path
+                                d="M 27 8 A 14 14 0 0 1 32 20"
+                                fill="none"
+                                [attr.stroke]="loan.riskScore === 4 ? '#ef4444' : '#e5e7eb'"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                              />
+                              <line
+                                x1="18"
+                                y1="20"
+                                [attr.x2]="getSmallGaugeNeedleX(loan.riskScore)"
+                                [attr.y2]="getSmallGaugeNeedleY(loan.riskScore)"
+                                [attr.stroke]="getRiskScoreColor(loan.riskScore)"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                              />
+                              <circle cx="18" cy="20" r="2.5" [attr.fill]="getRiskScoreColor(loan.riskScore)" />
+                            </svg>
+                            <span [class]="cn(
+                              'text-lg font-bold',
+                              loan.riskScore <= 2 ? 'text-pass' : loan.riskScore === 3 ? 'text-medium' : 'text-fail'
+                            )">
+                              {{ loan.riskScore }}
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      }
                       <!-- Compliance Score -->
                       <div class="flex items-center gap-2">
                         <span class="text-sm text-muted-foreground">Compliance Score:</span>
@@ -429,19 +451,19 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                         Summary
                       </h4>
                       <p class="text-base leading-relaxed text-foreground">
-                        The Income & Expense section covers {{ getCurrentRules().length }} rule categories with {{ getTotalRuleCount() }} individual rules. Key areas reviewed include Net Rental Income, Market Rent, Other Income, Occupancy, Operating Expenses, Insurance, Payroll, and Utilities. {{ getFailedRuleCount() }} rules require attention, primarily in areas related to insurance underwriting and expense trending assumptions.
+                        The {{ getCurrentTabTitle() }} section covers {{ getCurrentRules().length }} rule categor{{ getCurrentRules().length === 1 ? 'y' : 'ies' }} with {{ getTotalRuleCount() }} individual rule{{ getTotalRuleCount() === 1 ? '' : 's' }}. Key areas reviewed include {{ getCategoryNamesList() }}. {{ getFailedRuleCount() }} rule{{ getFailedRuleCount() === 1 ? '' : 's' }} require{{ getFailedRuleCount() === 1 ? 's' : '' }} attention{{ getFailedRuleCount() > 0 ? ', primarily in areas related to insurance underwriting and expense trending assumptions' : '' }}.
                       </p>
                     </div>
                   }
                 </div>
 
                 @if (getCurrentRules().length > 0) {
-                  <div [class]="cn(
-                    'grid gap-4',
-                    hasAnyPanelOpen() ? 'lg:grid-cols-2' : ''
-                  )">
-                    <div class="space-y-4">
-                      @for (category of getCurrentRules(); track category.name) {
+                  <div class="space-y-4">
+                    @for (category of getCurrentRules(); track category.name) {
+                      <div [class]="cn(
+                        'grid gap-4',
+                        isInsightOpen(category.name) || isComparisonOpen(category.name) ? 'lg:grid-cols-2' : ''
+                      )">
                         <div class="rounded-lg border border-border bg-card">
                           <!-- Category Header -->
                           <div
@@ -468,12 +490,13 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                             </span>
                             <div class="flex items-center gap-3">
                               <app-button
+                                variant="ghost"
                                 type="button"
-                                [class]="cn(
-                                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm',
+                                [className]="cn(
+                                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
                                   isInsightOpen(category.name)
-                                    ? 'border border-accent bg-transparent text-accent hover:bg-accent/10'
-                                    : 'bg-gradient-to-r from-accent/90 to-accent text-white hover:from-accent hover:to-accent/90 hover:shadow-md'
+                                    ? '!bg-transparent hover:!bg-accent/10'
+                                    : '!bg-gradient-to-r !from-accent/90 !to-accent hover:!bg-white'
                                 )"
                                 (click)="$event.stopPropagation(); toggleInsight(category.name)"
                                 title="View Risk Insight"
@@ -484,12 +507,13 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                 View Insight
                               </app-button>
                               <app-button
+                                variant="ghost"
                                 type="button"
-                                [class]="cn(
-                                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm',
+                                [className]="cn(
+                                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
                                   isComparisonOpen(category.name)
-                                    ? 'border border-accent bg-transparent text-accent hover:bg-accent/10'
-                                    : 'bg-gradient-to-r from-accent/90 to-accent text-white hover:from-accent hover:to-accent/90 hover:shadow-md'
+                                    ? '!bg-transparent hover:!bg-accent/10'
+                                    : '!bg-gradient-to-r !from-accent/90 !to-accent hover:!bg-white'
                                 )"
                                 (click)="$event.stopPropagation(); toggleComparison(category.name)"
                                 title="View Comparison"
@@ -514,16 +538,49 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                       ? 'border-border bg-card'
                                       : 'border-fail/20 bg-fail/[0.02]'
                                 )">
+                                  <!-- Clickable Header Row -->
                                   <div class="flex w-full items-center justify-between gap-4 p-5">
-                                    <div class="flex flex-1 items-center gap-3">
-                                      <h4 class="text-lg font-semibold text-foreground">{{ rule.name }}</h4>
-                                      @if (rule.ruleId) {
-                                        <span class="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                          Rule ID: {{ rule.ruleId }}
-                                        </span>
+                                    <button
+                                      type="button"
+                                      (click)="toggleRuleExpansion(category.name, rule.name); $event.stopPropagation()"
+                                      class="flex flex-1 items-center gap-3 text-left hover:opacity-80 transition-opacity"
+                                    >
+                                      @if (getExpandedRule(category.name, rule.name)) {
+                                        <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                      } @else {
+                                        <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
                                       }
-                                    </div>
+                                      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        <h4 class="text-lg font-semibold text-foreground">{{ rule.name }}</h4>
+                                        @if (rule.ruleId) {
+                                          <span class="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                            Rule ID: {{ rule.ruleId }}
+                                          </span>
+                                        }
+                                      </div>
+                                    </button>
                                     <div class="flex items-center gap-3">
+                                      <!-- Comment Icon -->
+                                      <button
+                                        type="button"
+                                        (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
+                                        [class]="cn(
+                                          'relative rounded-md p-1.5 transition-colors hover:bg-muted',
+                                          getComment(category.name, rule.name) ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
+                                        )"
+                                        title="Add comment"
+                                      >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                        </svg>
+                                        @if (getComment(category.name, rule.name)) {
+                                          <span class="absolute -right-1 -top-1 flex h-2 w-2 rounded-full bg-accent"></span>
+                                        }
+                                      </button>
                                       @if (rule.status === 'n/a') {
                                         <span class="text-sm font-medium text-muted-foreground shrink-0">N/A</span>
                                       } @else if (rule.status === 'pass') {
@@ -537,65 +594,179 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                       }
                                     </div>
                                   </div>
-                                  <div class="border-t border-border px-5 pb-5 pt-4">
-                                    <p class="text-base leading-relaxed text-muted-foreground">{{ rule.description }}</p>
-                                    @if (rule.subrules && rule.subrules.length > 0) {
-                                      <div class="mt-4">
-                                        <h5 class="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Subrules</h5>
-                                        <div class="space-y-2">
-                                          @for (subrule of rule.subrules; track subrule.name) {
-                                            <div [class]="cn(
-                                              'flex items-center justify-between gap-4 rounded-lg border p-3',
-                                              subrule.status === 'n/a'
-                                                ? 'border-muted bg-muted/30'
-                                                : subrule.status === 'pass'
-                                                  ? 'border-pass/20 bg-pass/5'
-                                                  : 'border-fail/20 bg-fail/5'
-                                            )">
-                                              <div class="flex items-start gap-3 flex-1">
-                                                @if (subrule.status === 'n/a') {
-                                                  <span class="mt-0.5 text-xs font-medium text-muted-foreground shrink-0">N/A</span>
-                                                } @else if (subrule.status === 'pass') {
-                                                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                  </svg>
-                                                } @else {
-                                                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                  </svg>
-                                                }
-                                                <div class="flex-1">
-                                                  <p [class]="cn(
-                                                    'text-sm font-medium',
-                                                    subrule.status === 'n/a' ? 'text-muted-foreground' : 'text-foreground'
-                                                  )">{{ subrule.name }}</p>
-                                                  <p class="text-sm text-muted-foreground">{{ subrule.description }}</p>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          }
-                                        </div>
+
+                                  <!-- Comment Popup -->
+                                  @if (getOpenRuleComment(category.name, rule.name)) {
+                                    <div class="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-4 shadow-lg">
+                                      <div class="mb-3 flex items-center justify-between">
+                                        <h5 class="text-sm font-semibold text-foreground">Comment for: {{ rule.name }}</h5>
+                                        <button
+                                          type="button"
+                                          (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
+                                          class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        >
+                                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                          </svg>
+                                        </button>
                                       </div>
-                                    }
-                                  </div>
+                                      <app-textarea
+                                        [value]="getRuleCommentText(category.name, rule.name)"
+                                        (valueChange)="onRuleCommentTextChange(category.name, rule.name, $event)"
+                                        placeholder="Enter your comment here..."
+                                        className="mb-3 min-h-[100px] resize-none text-sm"
+                                      ></app-textarea>
+                                      <div class="flex justify-end gap-2">
+                                        <app-button
+                                          variant="outline"
+                                          size="sm"
+                                          (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
+                                          className="bg-transparent"
+                                        >
+                                          Cancel
+                                        </app-button>
+                                        <app-button
+                                          size="sm"
+                                          (click)="handleSaveComment(category.name, rule.name, getRuleCommentText(category.name, rule.name)); $event.stopPropagation()"
+                                        >
+                                          Save Comment
+                                        </app-button>
+                                      </div>
+                                    </div>
+                                  }
+
+                                  <!-- Expanded Content -->
+                                  @if (getExpandedRule(category.name, rule.name)) {
+                                    <div class="border-t border-border px-5 pb-5 pt-4">
+                                      <p class="text-base leading-relaxed text-muted-foreground">{{ rule.description }}</p>
+
+                                      <!-- Subrules Section -->
+                                      @if (rule.subrules && rule.subrules.length > 0) {
+                                        <div class="mt-4">
+                                          <h5 class="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Subrules</h5>
+                                          <div class="space-y-2">
+                                            @for (subrule of rule.subrules; track subrule.name) {
+                                              <div class="relative">
+                                                <div
+                                                  [class]="cn(
+                                                    'flex items-center justify-between gap-4 rounded-lg border p-3',
+                                                    subrule.status === 'n/a'
+                                                      ? 'border-muted bg-muted/30'
+                                                      : subrule.status === 'pass'
+                                                        ? 'border-pass/20 bg-pass/5'
+                                                        : 'border-fail/20 bg-fail/5'
+                                                  )"
+                                                >
+                                                  <div class="flex items-start gap-3 flex-1">
+                                                    @if (subrule.status === 'n/a') {
+                                                      <span class="mt-0.5 text-xs font-medium text-muted-foreground shrink-0">N/A</span>
+                                                    } @else if (subrule.status === 'pass') {
+                                                      <svg class="mt-0.5 h-4 w-4 shrink-0 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                      </svg>
+                                                    } @else {
+                                                      <svg class="mt-0.5 h-4 w-4 shrink-0 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                      </svg>
+                                                    }
+                                                    <div class="flex-1">
+                                                      <p [class]="cn(
+                                                        'text-sm font-medium',
+                                                        subrule.status === 'n/a' ? 'text-muted-foreground' : 'text-foreground'
+                                                      )">{{ subrule.name }}</p>
+                                                      <p class="text-sm text-muted-foreground">{{ subrule.description }}</p>
+                                                    </div>
+                                                  </div>
+                                                  <div class="flex items-center gap-2">
+                                                    <!-- Subrule Comment Button -->
+                                                    <button
+                                                      type="button"
+                                                      (click)="toggleSubruleComment(category.name, rule.name, subrule.name); $event.stopPropagation()"
+                                                      [class]="cn(
+                                                        'relative rounded-md p-1 transition-colors hover:bg-muted',
+                                                        getSubruleComment(category.name, rule.name, subrule.name) ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
+                                                      )"
+                                                      title="Add comment"
+                                                    >
+                                                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                                      </svg>
+                                                    </button>
+                                                    @if (subrule.status === 'n/a') {
+                                                      <span class="text-xs font-medium text-muted-foreground shrink-0">N/A</span>
+                                                    } @else if (subrule.status === 'pass') {
+                                                      <svg class="h-5 w-5 shrink-0 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                      </svg>
+                                                    } @else {
+                                                      <svg class="h-5 w-5 shrink-0 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                      </svg>
+                                                    }
+                                                  </div>
+                                                </div>
+                                                <!-- Subrule Comment Popup -->
+                                                @if (getOpenSubruleComment(category.name, rule.name, subrule.name)) {
+                                                  <div class="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-3 shadow-lg">
+                                                    <div class="mb-2 flex items-center justify-between">
+                                                      <h6 class="text-xs font-semibold text-foreground">Comment: {{ subrule.name }}</h6>
+                                                      <button
+                                                        type="button"
+                                                        (click)="toggleSubruleComment(category.name, rule.name, subrule.name); $event.stopPropagation()"
+                                                        class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                      >
+                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                      </button>
+                                                    </div>
+                                                    <app-textarea
+                                                      [value]="getSubruleCommentText(category.name, rule.name, subrule.name)"
+                                                      (valueChange)="onSubruleCommentTextChange(category.name, rule.name, subrule.name, $event)"
+                                                      placeholder="Enter comment..."
+                                                      className="mb-2 min-h-[60px] resize-none text-xs"
+                                                    ></app-textarea>
+                                                    <div class="flex justify-end gap-2">
+                                                      <app-button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        (click)="toggleSubruleComment(category.name, rule.name, subrule.name); $event.stopPropagation()"
+                                                        className="h-7 bg-transparent text-xs"
+                                                      >
+                                                        Cancel
+                                                      </app-button>
+                                                      <app-button
+                                                        size="sm"
+                                                        className="h-7 text-xs"
+                                                        (click)="handleSaveSubruleComment(category.name, rule.name, subrule.name, getSubruleCommentText(category.name, rule.name, subrule.name)); $event.stopPropagation()"
+                                                      >
+                                                        Save
+                                                      </app-button>
+                                                    </div>
+                                                  </div>
+                                                }
+                                              </div>
+                                            }
+                                          </div>
+                                        </div>
+                                      }
+                                    </div>
+                                  }
                                 </div>
                               }
                             </div>
                           }
                         </div>
-                      }
-                    </div>
-
-                    <!-- Insight Panel -->
-                    @if (getOpenCategoryInsight()) {
-                      @let category = getOpenCategoryInsight()!;
-                      <div class="sticky top-4 rounded-lg border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
+                      
+                      <!-- Insight Panel for this specific category -->
+                      @if (isInsightOpen(category.name)) {
+                        <div class="rounded-lg border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
                         <div class="mb-4 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                             </svg>
-                            <h4 class="text-lg font-semibold text-foreground">Risk Insight</h4>
+                            <h4 class="text-lg font-semibold text-foreground">Risk Insight: {{ category.name }}</h4>
                           </div>
                           <button
                             (click)="toggleInsight(category.name)"
@@ -648,12 +819,11 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                           </div>
                         </div>
                       </div>
-                    }
+                      }
 
-                    <!-- Comparison Panel -->
-                    @if (getOpenCategoryComparison()) {
-                      @let category = getOpenCategoryComparison()!;
-                      <div class="sticky top-4 rounded-xl border border-accent/30 bg-accent/5 p-5">
+                      <!-- Comparison Panel for this specific category -->
+                      @if (isComparisonOpen(category.name)) {
+                        <div class="rounded-xl border border-accent/30 bg-accent/5 p-5">
                         <div class="mb-4 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -693,7 +863,13 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                           </div>
                         </div>
                       </div>
+                      }
+                      </div>
                     }
+                  </div>
+                } @else {
+                  <div class="rounded-xl border border-border bg-card p-6">
+                    <p class="text-muted-foreground">No rule categories available for this section.</p>
                   </div>
                 }
 
@@ -712,36 +888,36 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                     (valueChange)="onCommentChange($event)"
                     [placeholder]="'Enter any additional comments about ' + getCurrentTabTitle() + ' analysis...'"
                     className="min-h-[120px] resize-none text-base"
-                  ></app-textarea>
+                  >                  </app-textarea>
                 </div>
-              </div>
 
-              <!-- Export Comments Button -->
-              <div class="flex justify-end gap-3 border-t border-border pt-6">
-                <app-button
-                  variant="outline"
-                  className="gap-2 bg-transparent"
-                  (click)="exportCommentsToCSV()"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                  </svg>
-                  Export Comments to CSV
-                  @if (getTotalComments() > 0) {
-                    <span class="ml-1 rounded-full bg-accent px-2 py-0.5 text-xs text-white">
-                      {{ getTotalComments() }}
-                    </span>
-                  }
-                </app-button>
-                <app-button
-                  className="gap-2"
-                  (click)="savePageComment()"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  Save Comments
-                </app-button>
+                <!-- Export Comments Button -->
+                <div class="flex justify-end gap-3 border-t border-border pt-6">
+                  <app-button
+                    variant="outline"
+                    className="gap-2 bg-transparent"
+                    (click)="exportCommentsToCSV()"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Export Comments to CSV
+                    @if (getTotalComments() > 0) {
+                      <span class="ml-1 rounded-full bg-accent px-2 py-0.5 text-xs text-white">
+                        {{ getTotalComments() }}
+                      </span>
+                    }
+                  </app-button>
+                  <app-button
+                    className="gap-2"
+                    (click)="savePageComment()"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Save Comments
+                  </app-button>
+                </div>
               </div>
             </div>
         </div>
@@ -789,6 +965,12 @@ export class LoanDetailComponent implements OnInit {
   incomePageComment = signal<string>('');
   valuationPageComment = signal<string>('');
   comments = signal<Record<string, Record<string, string>>>({});
+  subruleComments = signal<Record<string, Record<string, Record<string, string>>>>({});
+  expandedRules = signal<Record<string, Record<string, boolean>>>({});
+  openRuleComment = signal<Record<string, Record<string, boolean>>>({});
+  openSubruleComment = signal<Record<string, Record<string, Record<string, boolean>>>>({});
+  ruleCommentText = signal<Record<string, Record<string, string>>>({});
+  subruleCommentText = signal<Record<string, Record<string, Record<string, string>>>>({});
 
   // Expose utility functions and Math to template
   formatCurrency = formatCurrency;
@@ -827,10 +1009,17 @@ export class LoanDetailComponent implements OnInit {
     this.apiService.getTestJson().subscribe({
       next: (data) => {
         // Always set headline scores first; other parsing should never block them.
-        this.loanSummaryScores.set(pickLoanSummaryScores(data));
+        const scores = pickLoanSummaryScores(data);
+        this.loanSummaryScores.set(scores);
+        if (scores) {
+          console.log('Risk score extracted from test_new.json:', scores.riskScore);
+        }
 
         try {
-          this.jsonRuleCategoriesBySection.set(buildRuleCategoriesBySectionFromTestJson(data));
+          const ruleCategories = buildRuleCategoriesBySectionFromTestJson(data);
+          console.log('Loaded rule categories from test_new.json:', ruleCategories);
+          console.log('Section keys:', Object.keys(ruleCategories));
+          this.jsonRuleCategoriesBySection.set(ruleCategories);
         } catch (error) {
           console.error('Error parsing rule categories:', error);
           this.jsonRuleCategoriesBySection.set(null);
@@ -869,7 +1058,7 @@ export class LoanDetailComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('Error loading test.json:', error);
+        console.error('Error loading test_new.json:', error);
         this.jsonRuleCategoriesBySection.set(null);
         this.jsonRiskInsights.set(null);
         this.propertyAddressFromFacts.set(null);
@@ -918,6 +1107,21 @@ export class LoanDetailComponent implements OnInit {
     if (score <= 2) return '#22c55e';
     if (score === 3) return '#eab308';
     return '#ef4444';
+  }
+
+  getSemicircleLength(): number {
+    const size = 80;
+    const strokeWidth = 8;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    return circumference / 2; // semicircle length
+  }
+
+  getRiskScoreOffset(score: number): number {
+    const maxScore = 4;
+    const percentage = (score / maxScore) * 100;
+    const semicircleLength = this.getSemicircleLength();
+    return semicircleLength - (percentage / 100) * semicircleLength;
   }
 
   // Helper for smaller gauge (36x22 viewBox)
@@ -974,7 +1178,15 @@ export class LoanDetailComponent implements OnInit {
     const categoryName = this.openCategoryInsight();
     if (!categoryName) return null;
     const rules = this.getCurrentRules();
-    return rules.find(cat => cat.name === categoryName) || null;
+    // Find the exact category match - case-insensitive comparison to handle any naming differences
+    const found = rules.find(cat => 
+      cat.name.toLowerCase().trim() === categoryName.toLowerCase().trim()
+    );
+    if (!found) {
+      console.warn('Category not found:', { categoryName, availableCategories: rules.map(c => c.name) });
+      return null;
+    }
+    return found;
   }
 
   getOpenCategoryComparison(): RuleCategory | null {
@@ -1001,18 +1213,48 @@ export class LoanDetailComponent implements OnInit {
   }
 
   getCurrentRules(): RuleCategory[] {
-    if (this.activeTab() === 'income') {
-      const jsonRules = this.jsonRuleCategoriesBySection();
-      if (jsonRules) {
-        const incomeKey = Object.keys(jsonRules).find(k => k.toLowerCase().includes('income')) || Object.keys(jsonRules)[0];
-        if (incomeKey && jsonRules[incomeKey]) {
-          return jsonRules[incomeKey] as unknown as RuleCategory[];
-        }
-      }
-      // Return empty array for now - can add fallback rules later
+    const jsonRules = this.jsonRuleCategoriesBySection();
+    if (!jsonRules) {
+      console.log('No JSON rules loaded yet');
       return [];
     }
-    // Valuation tab - empty for now
+
+    console.log('Available sections:', Object.keys(jsonRules));
+    console.log('Active tab:', this.activeTab());
+
+    if (this.activeTab() === 'income') {
+      // Look for section that contains "income" (case-insensitive)
+      // The test_new.json has "Income & Expenses" as the section name (note: "Expenses" plural)
+      const incomeKey = Object.keys(jsonRules).find(k => 
+        k.toLowerCase().includes('income') || k.toLowerCase().includes('expense')
+      );
+      console.log('Found income key:', incomeKey);
+      if (incomeKey && jsonRules[incomeKey]) {
+        const rules = jsonRules[incomeKey] as unknown as RuleCategory[];
+        console.log('Returning rules for income tab:', rules);
+        return rules;
+      }
+      // If no income section found, return first available section as fallback
+      const firstKey = Object.keys(jsonRules)[0];
+      if (firstKey) {
+        console.log('Using first available section as fallback:', firstKey);
+        return jsonRules[firstKey] as unknown as RuleCategory[];
+      }
+      return [];
+    }
+    
+    // Valuation tab - look for sections that might be valuation-related
+    if (this.activeTab() === 'valuation') {
+      const valuationKey = Object.keys(jsonRules).find(k => 
+        k.toLowerCase().includes('valuation') || k.toLowerCase().includes('appraisal')
+      );
+      if (valuationKey && jsonRules[valuationKey]) {
+        return jsonRules[valuationKey] as unknown as RuleCategory[];
+      }
+      // Return empty for valuation if no matching section
+      return [];
+    }
+    
     return [];
   }
 
@@ -1024,6 +1266,16 @@ export class LoanDetailComponent implements OnInit {
     return this.getCurrentRules().reduce((acc, cat) => 
       acc + cat.rules.filter(r => r.status === 'fail').length, 0
     );
+  }
+
+  getCategoryNamesList(): string {
+    const categories = this.getCurrentRules();
+    if (categories.length === 0) return 'various rule categories';
+    if (categories.length === 1) return categories[0].name;
+    if (categories.length === 2) return `${categories[0].name} and ${categories[1].name}`;
+    const allButLast = categories.slice(0, -1).map(c => c.name).join(', ');
+    const last = categories[categories.length - 1].name;
+    return `${allButLast}, and ${last}`;
   }
 
   getCategoryStatus(category: RuleCategory): string {
@@ -1093,7 +1345,9 @@ export class LoanDetailComponent implements OnInit {
     if (typeof value === 'string') {
       const trimmed = value.trim();
       if (!trimmed) return null;
-      const n = Number(trimmed);
+      // Remove commas from formatted numbers (e.g., "45,500,000" -> "45500000")
+      const cleaned = trimmed.replace(/,/g, '');
+      const n = Number(cleaned);
       return Number.isFinite(n) ? n : null;
     }
     return null;
@@ -1103,24 +1357,59 @@ export class LoanDetailComponent implements OnInit {
   displayedLoan = computed(() => {
     if (!this.loan) return null;
 
-    const jsonLoanNumberCandidate = this.jsonLoanSummary() !== null
-      ? this.textOrDash(this.pickLoanSummaryField('loan_number', 'loanNumber', 'loan_id', 'loanId'))
-      : null;
+    const jsonLoanSummary = this.jsonLoanSummary();
+    if (!jsonLoanSummary) {
+      // No JSON data available, use base loan data
+      return this.loan;
+    }
 
-    const hasJsonLoanSummary =
-      this.jsonLoanSummary() !== null &&
-      this.loan !== null &&
-      typeof jsonLoanNumberCandidate === 'string' &&
-      jsonLoanNumberCandidate !== '—' &&
-      jsonLoanNumberCandidate === this.loan.loanNumber;
-
+    // Try to match by loan_id first (internal ID), then by loan_number
+    const jsonLoanId = this.pickLoanSummaryField('loan_id', 'loanId');
+    const jsonLoanNumber = this.pickLoanSummaryField('loan_number', 'loanNumber');
+    
+    // Match by ID if available, otherwise match by loan number
+    const matchesById = jsonLoanId !== undefined && 
+                   String(jsonLoanId) === this.loan.id;
+    const matchesByNumber = jsonLoanNumber !== undefined && 
+                           typeof jsonLoanNumber === 'string' &&
+                           jsonLoanNumber.trim() !== '' &&
+                           jsonLoanNumber === this.loan.loanNumber;
+    
+    const hasJsonLoanSummary = matchesById || matchesByNumber;
+    
+    // Calculate display values first (before using them)
     const displayRiskScore = this.loanSummaryScores()?.riskScore ?? this.loan.riskScore;
     const displayCompliance = this.loanSummaryScores()?.compliance ?? this.loan.complianceScoreData;
+    
+    console.log('Loan matching check:', {
+      loanId: this.loan.id,
+      loanNumber: this.loan.loanNumber,
+      jsonLoanId,
+      jsonLoanNumber,
+      matchesById,
+      matchesByNumber,
+      hasJsonLoanSummary,
+      jsonLoanSummary: jsonLoanSummary
+    });
+    
+    if (hasJsonLoanSummary) {
+      console.log('Using JSON data for loan details. Fields from JSON:', {
+        propertyType: this.pickLoanSummaryField('property_type', 'propertyType'),
+        loanAmount: this.pickLoanSummaryField('loan_amount', 'loanAmount'),
+        upb: this.pickLoanSummaryField('upb', 'current_upb', 'currentUPB'),
+        units: this.pickLoanSummaryField('units'),
+        riskScore: displayRiskScore,
+        complianceScore: displayCompliance
+      });
+    } else {
+      console.log('Using base loan data (no JSON match found)');
+    }
 
     return {
       ...this.loan,
-      loanNumber: hasJsonLoanSummary
-        ? this.textOrDash(this.pickLoanSummaryField('loan_number', 'loanNumber', 'loan_id', 'loanId'))
+      // Always use JSON data if available and matches, otherwise use base loan data
+      loanNumber: hasJsonLoanSummary && jsonLoanNumber !== undefined
+        ? this.textOrDash(jsonLoanNumber)
         : this.loan.loanNumber,
       loanAmount: hasJsonLoanSummary
         ? (this.toNumber(this.pickLoanSummaryField('loan_amount', 'loanAmount')) ?? this.loan.loanAmount)
@@ -1132,7 +1421,7 @@ export class LoanDetailComponent implements OnInit {
         ? this.textOrDash(this.pickLoanSummaryField('acquisition_date', 'acquisitionDate'))
         : this.loan.acquisitionDate,
       lenderName: hasJsonLoanSummary
-        ? this.textOrDash(this.pickLoanSummaryField('lender_name', 'lenderName'))
+        ? this.textOrDash(this.pickLoanSummaryField('lender', 'lender_name', 'lenderName'))
         : this.loan.lenderName,
       upb: hasJsonLoanSummary
         ? (this.toNumber(this.pickLoanSummaryField('upb', 'current_upb', 'currentUPB')) ?? this.loan.upb)
@@ -1143,6 +1432,9 @@ export class LoanDetailComponent implements OnInit {
       commitmentDate: hasJsonLoanSummary
         ? this.textOrDash(this.pickLoanSummaryField('commitment_date', 'commitmentDate'))
         : this.loan.commitmentDate,
+      units: hasJsonLoanSummary
+        ? (this.toNumber(this.pickLoanSummaryField('units')) ?? this.loan.units)
+        : this.loan.units,
       riskScore: displayRiskScore,
       complianceScoreData: displayCompliance,
       // Override narrative and key risk areas from JSON if available
@@ -1151,22 +1443,59 @@ export class LoanDetailComponent implements OnInit {
     };
   });
 
+  private hasJsonLoanSummary(): boolean {
+    const jsonLoanSummary = this.jsonLoanSummary();
+    if (!jsonLoanSummary || !this.loan) return false;
+    
+    const jsonLoanId = this.pickLoanSummaryField('loan_id', 'loanId');
+    const jsonLoanNumber = this.pickLoanSummaryField('loan_number', 'loanNumber');
+    const matchesById = jsonLoanId !== undefined && String(jsonLoanId) === this.loan.id;
+    const matchesByNumber = jsonLoanNumber !== undefined && 
+                           typeof jsonLoanNumber === 'string' &&
+                           jsonLoanNumber.trim() !== '' &&
+                           jsonLoanNumber === this.loan.loanNumber;
+    return matchesById || matchesByNumber;
+  }
+
   private getDisplayedNarrative(): string {
-    const narrativeText = this.jsonRiskInsights()?.summary_narrative?.trim();
-    if (narrativeText && narrativeText.length > 0) {
-      return narrativeText;
+    // Match React logic: if hasJsonLoanSummary, use JSON risk insights, otherwise use loan's aiExplanation
+    const hasJsonLoanSummary = this.hasJsonLoanSummary();
+    if (hasJsonLoanSummary) {
+      const narrativeText = this.jsonRiskInsights()?.summary_narrative?.trim();
+      if (narrativeText && narrativeText.length > 0) {
+        console.log('Using narrative from test_new.json risk_insights:', narrativeText);
+        return narrativeText;
+      }
     }
-    return this.loan?.aiExplanation ?? '';
+    // Fallback to loan's aiExplanation (matching React behavior)
+    const loanExplanation = this.loan?.aiExplanation?.trim();
+    if (loanExplanation && loanExplanation.length > 0) {
+      console.log('Using narrative from loan data:', loanExplanation);
+      return loanExplanation;
+    }
+    console.log('No narrative available');
+    return '';
   }
 
   private getDisplayedKeyRiskAreas(): string[] {
+    // Match React logic exactly:
+    // 1. If loan has keyRiskAreas, use those
+    // 2. Otherwise, if hasJsonLoanSummary and JSON has key_risk_areas, use JSON
+    // 3. Otherwise, return empty array
     if (this.loan?.keyRiskAreas?.length) {
+      console.log('Using key risk areas from loan data:', this.loan.keyRiskAreas);
       return this.loan.keyRiskAreas;
     }
-    if (this.jsonRiskInsights()?.key_risk_areas && this.jsonRiskInsights()!.key_risk_areas!.length > 0) {
-      return this.jsonRiskInsights()!.key_risk_areas!;
+    const hasJsonLoanSummary = this.hasJsonLoanSummary();
+    if (hasJsonLoanSummary) {
+      const jsonRiskAreas = this.jsonRiskInsights()?.key_risk_areas;
+      if (jsonRiskAreas && Array.isArray(jsonRiskAreas) && jsonRiskAreas.length > 0) {
+        console.log('Using key risk areas from test_new.json risk_insights:', jsonRiskAreas);
+        return jsonRiskAreas;
+      }
     }
-    return this.loan?.keyRiskAreas ?? [];
+    console.log('No key risk areas available');
+    return [];
   }
 
   getCategoryInsightObservations(category: RuleCategory): string {
@@ -1207,11 +1536,198 @@ export class LoanDetailComponent implements OnInit {
     }
   }
 
+  toggleRuleExpansion(categoryName: string, ruleName: string) {
+    const current = this.expandedRules();
+    const category = current[categoryName] || {};
+    this.expandedRules.set({
+      ...current,
+      [categoryName]: {
+        ...category,
+        [ruleName]: !category[ruleName]
+      }
+    });
+  }
+
+  toggleRuleComment(categoryName: string, ruleName: string) {
+    const current = this.openRuleComment();
+    const category = current[categoryName] || {};
+    const isOpen = category[ruleName] || false;
+    
+    // Initialize comment text if opening
+    if (!isOpen) {
+      const commentText = this.ruleCommentText();
+      const categoryText = commentText[categoryName] || {};
+      if (!categoryText[ruleName]) {
+        const existingComment = this.getComment(categoryName, ruleName) || '';
+        this.ruleCommentText.set({
+          ...commentText,
+          [categoryName]: {
+            ...categoryText,
+            [ruleName]: existingComment
+          }
+        });
+      }
+    }
+    
+    this.openRuleComment.set({
+      ...current,
+      [categoryName]: {
+        ...category,
+        [ruleName]: !isOpen
+      }
+    });
+  }
+
+  toggleSubruleComment(categoryName: string, ruleName: string, subruleName: string) {
+    const current = this.openSubruleComment();
+    const category = current[categoryName] || {};
+    const rule = category[ruleName] || {};
+    const isOpen = rule[subruleName] || false;
+    
+    // Initialize comment text if opening
+    if (!isOpen) {
+      const commentText = this.subruleCommentText();
+      const categoryText = commentText[categoryName] || {};
+      const ruleText = categoryText[ruleName] || {};
+      if (!ruleText[subruleName]) {
+        const existingComment = this.getSubruleComment(categoryName, ruleName, subruleName) || '';
+        this.subruleCommentText.set({
+          ...commentText,
+          [categoryName]: {
+            ...categoryText,
+            [ruleName]: {
+              ...ruleText,
+              [subruleName]: existingComment
+            }
+          }
+        });
+      }
+    }
+    
+    this.openSubruleComment.set({
+      ...current,
+      [categoryName]: {
+        ...category,
+        [ruleName]: {
+          ...rule,
+          [subruleName]: !isOpen
+        }
+      }
+    });
+  }
+
+  handleSaveComment(categoryName: string, ruleName: string, comment: string) {
+    const current = this.comments();
+    this.comments.set({
+      ...current,
+      [categoryName]: {
+        ...(current[categoryName] || {}),
+        [ruleName]: comment
+      }
+    });
+    this.toggleRuleComment(categoryName, ruleName);
+  }
+
+  onRuleCommentTextChange(categoryName: string, ruleName: string, value: string) {
+    const current = this.ruleCommentText();
+    const category = current[categoryName] || {};
+    this.ruleCommentText.set({
+      ...current,
+      [categoryName]: {
+        ...category,
+        [ruleName]: value
+      }
+    });
+  }
+
+  onSubruleCommentTextChange(categoryName: string, ruleName: string, subruleName: string, value: string) {
+    const current = this.subruleCommentText();
+    const category = current[categoryName] || {};
+    const rule = category[ruleName] || {};
+    this.subruleCommentText.set({
+      ...current,
+      [categoryName]: {
+        ...category,
+        [ruleName]: {
+          ...rule,
+          [subruleName]: value
+        }
+      }
+    });
+  }
+
+  handleSaveSubruleComment(categoryName: string, ruleName: string, subruleName: string, comment: string) {
+    const current = this.subruleComments();
+    this.subruleComments.set({
+      ...current,
+      [categoryName]: {
+        ...(current[categoryName] || {}),
+        [ruleName]: {
+          ...((current[categoryName] && current[categoryName][ruleName]) ? current[categoryName][ruleName] : {}),
+          [subruleName]: comment
+        }
+      }
+    });
+    this.toggleSubruleComment(categoryName, ruleName, subruleName);
+  }
+
+  // Helper methods to safely access nested properties without optional chaining warnings
+  getExpandedRule(categoryName: string, ruleName: string): boolean {
+    const category = this.expandedRules()[categoryName];
+    return category ? (category[ruleName] || false) : false;
+  }
+
+  getComment(categoryName: string, ruleName: string): string | undefined {
+    const category = this.comments()[categoryName];
+    return category ? category[ruleName] : undefined;
+  }
+
+  getOpenRuleComment(categoryName: string, ruleName: string): boolean {
+    const category = this.openRuleComment()[categoryName];
+    return category ? (category[ruleName] || false) : false;
+  }
+
+  getRuleCommentText(categoryName: string, ruleName: string): string {
+    const category = this.ruleCommentText()[categoryName];
+    return category ? (category[ruleName] || '') : '';
+  }
+
+  getSubruleComment(categoryName: string, ruleName: string, subruleName: string): string | undefined {
+    const category = this.subruleComments()[categoryName];
+    if (!category) return undefined;
+    const rule = category[ruleName];
+    return rule ? rule[subruleName] : undefined;
+  }
+
+  getOpenSubruleComment(categoryName: string, ruleName: string, subruleName: string): boolean {
+    const category = this.openSubruleComment()[categoryName];
+    if (!category) return false;
+    const rule = category[ruleName];
+    return rule ? (rule[subruleName] || false) : false;
+  }
+
+  getSubruleCommentText(categoryName: string, ruleName: string, subruleName: string): string {
+    const category = this.subruleCommentText()[categoryName];
+    if (!category) return '';
+    const rule = category[ruleName];
+    return rule ? (rule[subruleName] || '') : '';
+  }
+
   getTotalComments(): number {
-    return Object.values(this.comments()).reduce(
+    const ruleComments = Object.values(this.comments()).reduce(
       (acc, categoryComments) => acc + Object.values(categoryComments).filter(c => c.trim()).length,
       0
     );
+    const subruleComments = Object.values(this.subruleComments()).reduce(
+      (acc, categoryComments) => {
+        return acc + Object.values(categoryComments).reduce(
+          (ruleAcc, ruleComments) => ruleAcc + Object.values(ruleComments).filter(c => c.trim()).length,
+          0
+        );
+      },
+      0
+    );
+    return ruleComments + subruleComments;
   }
 
   savePageComment() {
@@ -1220,14 +1736,26 @@ export class LoanDetailComponent implements OnInit {
   }
 
   exportCommentsToCSV() {
-    const rows: string[][] = [['Category', 'Rule Name', 'Comment', 'Timestamp']];
+    const rows: string[][] = [['Type', 'Category', 'Rule Name', 'Subrule Name', 'Comment', 'Timestamp']];
     const timestamp = new Date().toISOString();
     
+    // Export rule comments
     Object.entries(this.comments()).forEach(([categoryName, categoryComments]) => {
       Object.entries(categoryComments).forEach(([ruleName, comment]) => {
         if (comment.trim()) {
-          rows.push([categoryName, ruleName, comment, timestamp]);
+          rows.push(['Rule', categoryName, ruleName, '', comment, timestamp]);
         }
+      });
+    });
+    
+    // Export subrule comments
+    Object.entries(this.subruleComments()).forEach(([categoryName, categoryComments]) => {
+      Object.entries(categoryComments).forEach(([ruleName, ruleComments]) => {
+        Object.entries(ruleComments).forEach(([subruleName, comment]) => {
+          if (comment.trim()) {
+            rows.push(['Subrule', categoryName, ruleName, subruleName, comment, timestamp]);
+          }
+        });
       });
     });
     

@@ -76,57 +76,57 @@ export function RiskAnalysisFilters({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-1.5">
         {/* Risk Score Filter */}
         <Select value={riskScoreFilter} onValueChange={onRiskScoreChange}>
-          <SelectTrigger className="h-12 w-[150px] text-base">
+          <SelectTrigger className="h-8 w-[125px] text-xs">
             <SelectValue placeholder="Risk Score" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-base">All Risk Scores</SelectItem>
-            <SelectItem value="1" className="text-base">1</SelectItem>
-            <SelectItem value="2" className="text-base">2</SelectItem>
-            <SelectItem value="3" className="text-base">3</SelectItem>
-            <SelectItem value="4" className="text-base">4</SelectItem>
+            <SelectItem value="all" className="text-xs">All Risk Scores</SelectItem>
+            <SelectItem value="1" className="text-xs">1</SelectItem>
+            <SelectItem value="2" className="text-xs">2</SelectItem>
+            <SelectItem value="3" className="text-xs">3</SelectItem>
+            <SelectItem value="4" className="text-xs">4</SelectItem>
           </SelectContent>
         </Select>
 
         {/* TLR Status Filter */}
         <Select value={tlrStatusFilter} onValueChange={onTlrStatusChange}>
-          <SelectTrigger className="h-12 w-[180px] text-base">
+          <SelectTrigger className="h-8 w-[130px] text-xs">
             <SelectValue placeholder="TLR Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-base">All TLR Status</SelectItem>
-            <SelectItem value="TLR Completed" className="text-base">TLR Completed</SelectItem>
-            <SelectItem value="TLR Not Completed" className="text-base">TLR Not Completed</SelectItem>
-            <SelectItem value="unknown" className="text-base">Unknown</SelectItem>
+            <SelectItem value="all" className="text-xs">All TLR Status</SelectItem>
+            <SelectItem value="TLR Completed" className="text-xs">TLR Completed</SelectItem>
+            <SelectItem value="TLR Not Completed" className="text-xs">TLR Not Completed</SelectItem>
+            <SelectItem value="unknown" className="text-xs">Unknown</SelectItem>
           </SelectContent>
         </Select>
 
         {/* Credit Delegation Type Filter */}
         <Select value={delegationFilter} onValueChange={onDelegationChange}>
-          <SelectTrigger className="h-12 w-[180px] text-base">
+          <SelectTrigger className="h-8 w-[130px] text-xs">
             <SelectValue placeholder="Delegation Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-base">All Delegation</SelectItem>
-            <SelectItem value="Preview" className="text-base">Preview</SelectItem>
-            <SelectItem value="PD" className="text-base">PD (Performance)</SelectItem>
-            <SelectItem value="Standard" className="text-base">Standard</SelectItem>
+            <SelectItem value="all" className="text-xs">All Delegation</SelectItem>
+            <SelectItem value="Preview" className="text-xs">Preview</SelectItem>
+            <SelectItem value="PD" className="text-xs">PD (Performance)</SelectItem>
+            <SelectItem value="Standard" className="text-xs">Standard</SelectItem>
           </SelectContent>
         </Select>
 
         {/* Lender Filter */}
         <Select value={lenderFilter} onValueChange={onLenderChange}>
-          <SelectTrigger className="h-12 w-[180px] text-base">
+          <SelectTrigger className="h-8 w-[120px] text-xs">
             <SelectValue placeholder="All Lenders" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-base">All Lenders</SelectItem>
-            <SelectItem value="Lender A" className="text-base">Lender A</SelectItem>
-            <SelectItem value="First National" className="text-base">First National</SelectItem>
-            <SelectItem value="Capital Bank" className="text-base">Capital Bank</SelectItem>
+            <SelectItem value="all" className="text-xs">All Lenders</SelectItem>
+            <SelectItem value="Lender A" className="text-xs">Lender A</SelectItem>
+            <SelectItem value="First National" className="text-xs">First National</SelectItem>
+            <SelectItem value="Capital Bank" className="text-xs">Capital Bank</SelectItem>
           </SelectContent>
         </Select>
 
@@ -138,33 +138,33 @@ export function RiskAnalysisFilters({
 
         {/* Underwriter Filter */}
         <Select value={underwriterFilter} onValueChange={onUnderwriterChange}>
-          <SelectTrigger className="h-12 w-[170px] text-base">
+          <SelectTrigger className="h-8 w-[135px] text-xs">
             <SelectValue placeholder="Underwriter" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-base">All Underwriters</SelectItem>
-            <SelectItem value="John Smith" className="text-base">John Smith</SelectItem>
-            <SelectItem value="Michael Chen" className="text-base">Michael Chen</SelectItem>
-            <SelectItem value="David Wilson" className="text-base">David Wilson</SelectItem>
-            <SelectItem value="Emily Davis" className="text-base">Emily Davis</SelectItem>
-            <SelectItem value="Jennifer Taylor" className="text-base">Jennifer Taylor</SelectItem>
-            <SelectItem value="Chris Thompson" className="text-base">Chris Thompson</SelectItem>
+            <SelectItem value="all" className="text-xs">All Underwriters</SelectItem>
+            <SelectItem value="John Smith" className="text-xs">John Smith</SelectItem>
+            <SelectItem value="Michael Chen" className="text-xs">Michael Chen</SelectItem>
+            <SelectItem value="David Wilson" className="text-xs">David Wilson</SelectItem>
+            <SelectItem value="Emily Davis" className="text-xs">Emily Davis</SelectItem>
+            <SelectItem value="Jennifer Taylor" className="text-xs">Jennifer Taylor</SelectItem>
+            <SelectItem value="Chris Thompson" className="text-xs">Chris Thompson</SelectItem>
           </SelectContent>
         </Select>
 
         {/* Originator Filter */}
         <Select value={originatorFilter} onValueChange={onOriginatorChange}>
-          <SelectTrigger className="h-12 w-[170px] text-base">
+          <SelectTrigger className="h-8 w-[130px] text-xs">
             <SelectValue placeholder="Originator" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-base">All Originators</SelectItem>
-            <SelectItem value="Sarah Johnson" className="text-base">Sarah Johnson</SelectItem>
-            <SelectItem value="Lisa Park" className="text-base">Lisa Park</SelectItem>
-            <SelectItem value="Amanda Brown" className="text-base">Amanda Brown</SelectItem>
-            <SelectItem value="Robert Martinez" className="text-base">Robert Martinez</SelectItem>
-            <SelectItem value="Kevin Anderson" className="text-base">Kevin Anderson</SelectItem>
-            <SelectItem value="Michelle Lee" className="text-base">Michelle Lee</SelectItem>
+            <SelectItem value="all" className="text-xs">All Originators</SelectItem>
+            <SelectItem value="Sarah Johnson" className="text-xs">Sarah Johnson</SelectItem>
+            <SelectItem value="Lisa Park" className="text-xs">Lisa Park</SelectItem>
+            <SelectItem value="Amanda Brown" className="text-xs">Amanda Brown</SelectItem>
+            <SelectItem value="Robert Martinez" className="text-xs">Robert Martinez</SelectItem>
+            <SelectItem value="Kevin Anderson" className="text-xs">Kevin Anderson</SelectItem>
+            <SelectItem value="Michelle Lee" className="text-xs">Michelle Lee</SelectItem>
           </SelectContent>
         </Select>
 

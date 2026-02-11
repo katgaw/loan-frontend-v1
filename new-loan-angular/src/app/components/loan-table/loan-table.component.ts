@@ -96,7 +96,7 @@ const severityStyles = {
             @for (loan of sortedLoans(); track loan.id) {
               <tr
                 (click)="onLoanClick(loan.id)"
-                class="cursor-pointer transition-colors hover:bg-accent/5"
+                class="cursor-pointer transition-colors hover:bg-muted/50"
               >
                 <!-- Loan Info -->
                 <td class="px-4 py-4 align-top">

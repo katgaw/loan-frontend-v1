@@ -118,13 +118,12 @@ export function SystemRecommendations() {
         <div
           key={item.key}
           className={cn(
-            "relative overflow-hidden rounded-lg border p-5 transition-all hover:shadow-md",
-            severityStyles[item.severity]
+            "relative overflow-hidden rounded-lg border p-5 transition-all hover:shadow-md bg-purple-50/50 border-purple-100"
           )}
         >
           <div className="mb-3">
-            <div className="rounded-lg bg-background/50 p-2 w-fit">
-              <item.icon className="h-6 w-6" />
+            <div className="rounded-lg bg-purple-600 p-2 w-fit">
+              <item.icon className="h-6 w-6 text-white" />
             </div>
           </div>
           <h3 className="mb-1.5 text-lg font-semibold text-foreground">{item.title}</h3>

@@ -9,7 +9,7 @@ export class ApiService {
   constructor(private http: HttpClient) {}
 
   getTestJson(): Observable<any> {
-    // Read test.json from assets directory
-    return this.http.get<any>('/assets/test.json');
+    // Read test_new.json from assets directory
+    return this.http.get<any>('/assets/test_new.json');
   }
 }
