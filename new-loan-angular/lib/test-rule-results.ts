@@ -55,9 +55,7 @@ export interface UiRuleCategory {
     finalConclusion: string[];
   };
   comparison: {
-    lenderNarrative: string;
-    businessRuleOutcome: string;
-    appraisalData: string;
+    items: Array<{ question: string; answer: string }>;
   };
 }
 
@@ -154,9 +152,7 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
         finalConclusion,
       },
       comparison: {
-        lenderNarrative: "Not provided in rule_results.",
-        appraisalData: "Not provided in rule_results.",
-        businessRuleOutcome: "See individual rule outcomes by expanding a rule.",
+        items: [],
       },
     }));
   }

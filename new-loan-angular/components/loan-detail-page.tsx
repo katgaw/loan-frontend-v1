@@ -65,10 +65,13 @@ interface RiskInsight {
   finalConclusion: string[] | string;
 }
 
+interface ComparisonItem {
+  question: string;
+  answer: string;
+}
+
 interface ComparisonData {
-  lenderNarrative: string;
-  businessRuleOutcome: string;
-  appraisalData: string;
+  items: ComparisonItem[];
 }
 
 interface RuleComment {
@@ -250,9 +253,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender states underwritten NRI of $1,500,000 is based on current rent roll with 3% annual growth assumption. T12 actual NRI was $1,520,000 with stable occupancy of 92%.",
-      businessRuleOutcome: "Business rules confirm UW NRI of $1,500,000 is conservative - below T12 ($1,520,000), T6 annualized ($1,540,000), and T3 annualized ($1,560,000). All historical comparison tests pass.",
-      appraisalData: "Appraisal indicates market NRI for comparable properties ranges from $1,450,000 to $1,620,000. Subject property NRI of $1,500,000 falls within the 35th percentile of market range."
+      items: [
+        { question: "Is the UW NRI less than or equal to the T12 NRI?", answer: "Yes" },
+        { question: "Is the UW NRI within the appraisal comparable range?", answer: "Yes" },
+        { question: "Is the NRI growth assumption supported by historical trends?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -304,9 +309,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender states UW rents are based on current in-place rents with minor adjustments for recent lease renewals. 1BR at $1,450, 2BR at $1,750, 3BR at $2,100 per month.",
-      businessRuleOutcome: "Business rules identify 1BR and 2BR rents exceeding appraisal maximum comparables. 1BR UW rent of $1,450 exceeds max comp of $1,380 by 5.1%. 2BR UW rent of $1,750 exceeds max comp of $1,680 by 4.2%.",
-      appraisalData: "Appraisal rent comparables show: 1BR max $1,380/month, 2BR max $1,680/month, 3BR max $2,250/month. Subject property 1BR and 2BR rents are above market ceiling."
+      items: [
+        { question: "Are 1BR UW rents within appraisal comparable range?", answer: "No" },
+        { question: "Are 2BR UW rents within appraisal comparable range?", answer: "No" },
+        { question: "Are 3BR UW rents within appraisal comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -351,9 +358,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender projects Other Income of $185,000 based on new parking fee structure and laundry contract renegotiation expected to increase revenue.",
-      businessRuleOutcome: "Business rules flag Other Income as exceeding T12 historical of $172,000 by 7.6%. While within appraisal maximum of $195,000, the assumption is aggressive relative to demonstrated performance.",
-      appraisalData: "Appraisal estimates Other Income range of $165,000 to $195,000 based on comparable properties. Subject UW of $185,000 is at the 80th percentile of the range."
+      items: [
+        { question: "Is the Other Income less than or equal to the maximum appraisal estimate?", answer: "Yes" },
+        { question: "Is the Other Income less than or equal to the historical T12 Income?", answer: "No" },
+        { question: "Is the Other Income less than or equal to the Insight estimate?", answer: "N/A" },
+      ]
     }
   },
   {
@@ -399,9 +408,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender confirms property is 100% residential multifamily with no commercial component or retail space.",
-      businessRuleOutcome: "Business rules correctly identify N/A status for all commercial income tests as property contains no commercial square footage.",
-      appraisalData: "Appraisal confirms subject is a 248-unit residential multifamily property with 0 SF of commercial space. No commercial income is applicable."
+      items: [
+        { question: "Does the property contain commercial square footage?", answer: "N/A" },
+        { question: "Is commercial income applicable?", answer: "N/A" },
+      ]
     }
   },
   {
@@ -456,9 +466,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender reports current physical occupancy of 92.3% and economic occupancy of 88.7% based on most recent rent roll dated within 30 days.",
-      businessRuleOutcome: "Business rules confirm all occupancy thresholds met: Physical occupancy above 85% minimum (92.3%) and economic occupancy above 70% minimum (88.7%) for all trailing 3 months.",
-      appraisalData: "Appraisal notes submarket vacancy of 7.2% with subject property outperforming market. Stabilized occupancy assumption of 93% is supported by historical performance."
+      items: [
+        { question: "Is the physical occupancy above the 85% minimum?", answer: "Yes" },
+        { question: "Is the economic occupancy above the 70% minimum?", answer: "Yes" },
+        { question: "Is the rent roll dated within 30 days?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -504,9 +516,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites total operating expenses at $2,180,000 ($8,790/unit) based on T12 actuals with 3% inflation adjustment for controllable expenses.",
-      businessRuleOutcome: "Business rules confirm UW OpEx of $2,180,000 exceeds appraisal minimum of $2,050,000 and T12 historical of $2,120,000. All operating expense tests pass.",
-      appraisalData: "Appraisal operating expense comparables range from $8,200 to $9,400 per unit. Subject UW of $8,790/unit is at the 55th percentile, considered reasonable."
+      items: [
+        { question: "Does the UW OpEx exceed the appraisal minimum?", answer: "Yes" },
+        { question: "Does the UW OpEx exceed the T12 historical?", answer: "Yes" },
+        { question: "Is the UW OpEx per unit within comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -552,9 +566,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites insurance at $245,000 based on current policy premium with assumption that renewal will be at similar levels.",
-      businessRuleOutcome: "Business rules identify insurance UW of $245,000 as below T12 historical ($268,000) and required 5% trend ($281,400). Insurance policy expires in 8 months requiring trending adjustment.",
-      appraisalData: "Appraisal notes significant insurance market hardening in Phoenix metro with 15-25% annual increases common. Current UW appears to underestimate renewal costs."
+      items: [
+        { question: "Is the insurance UW at or above the T12 historical?", answer: "No" },
+        { question: "Does the insurance UW account for 5% trend?", answer: "No" },
+        { question: "Is the insurance policy renewal reflected?", answer: "No" },
+      ]
     }
   },
   {
@@ -599,9 +615,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites G&A at $85,000 based on normalized expenses excluding one-time legal costs incurred in T12 period.",
-      businessRuleOutcome: "Business rules flag G&A UW of $85,000 as below T12 historical of $92,000 by 7.6%. While above appraisal minimum of $78,000, the reduction from historical requires justification.",
-      appraisalData: "Appraisal G&A comparables range from $300 to $400 per unit. Subject UW of $343/unit is within range but below property's demonstrated historical expense level."
+      items: [
+        { question: "Is the G&A UW at or above the T12 historical?", answer: "No" },
+        { question: "Is the G&A UW above the appraisal minimum?", answer: "Yes" },
+        { question: "Is the G&A per unit within comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -646,9 +664,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites R&M at $458,000 ($1,847/unit) reflecting property age of 12 years and anticipated HVAC and roofing repairs in the near term.",
-      businessRuleOutcome: "Business rules confirm R&M UW of $458,000 exceeds both appraisal minimum ($420,000) and T12 historical ($445,000). All R&M tests pass.",
-      appraisalData: "Appraisal R&M comparables for similar vintage properties range from $1,600 to $2,100 per unit. Subject UW of $1,847/unit is appropriately conservative at 55th percentile."
+      items: [
+        { question: "Does the R&M UW exceed the appraisal minimum?", answer: "Yes" },
+        { question: "Does the R&M UW exceed the T12 historical?", answer: "Yes" },
+        { question: "Is the R&M per unit within comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -693,9 +713,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites payroll at $385,000 based on current staffing of 6 FTEs with 2% wage increase assumption.",
-      businessRuleOutcome: "Business rules flag payroll UW of $385,000 as below appraisal minimum of $410,000 by 6.1%. While above T12 historical, market wage data suggests higher costs.",
-      appraisalData: "Appraisal payroll comparables show range of $1,500 to $1,800 per unit in Phoenix market. Subject UW of $1,552/unit is at lower end, not reflecting current labor market tightness."
+      items: [
+        { question: "Is the payroll UW at or above the appraisal minimum?", answer: "No" },
+        { question: "Does the payroll UW reflect current market wages?", answer: "No" },
+        { question: "Is the payroll per unit within comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -739,9 +761,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites combined utilities at $312,000 based on T12 actuals plus 5% for anticipated rate increases.",
-      businessRuleOutcome: "Business rules confirm combined utilities UW of $312,000 exceeds appraisal minimum ($295,000) and T12 historical ($298,000). All utility tests pass.",
-      appraisalData: "Appraisal utility comparables show $1,150 to $1,350 per unit range. Subject UW of $1,258/unit is appropriately positioned at market midpoint."
+      items: [
+        { question: "Does the combined utilities UW exceed the appraisal minimum?", answer: "Yes" },
+        { question: "Does the combined utilities UW exceed the T12 historical?", answer: "Yes" },
+        { question: "Is the per-unit utility expense within market range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -785,9 +809,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites utilities at $168,000 based on master-metered common area consumption with 4% rate increase assumption.",
-      businessRuleOutcome: "Business rules confirm utilities UW of $168,000 exceeds T12 historical of $162,000. Test passes with 3.7% cushion above historical.",
-      appraisalData: "Appraisal notes APS rate increases of 2.5% approved for service area. UW assumption adequately captures projected increases."
+      items: [
+        { question: "Does the utilities UW exceed the T12 historical?", answer: "Yes" },
+        { question: "Does the UW account for approved rate increases?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -831,9 +856,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites electricity at $95,000 based on 285,000 kWh common area consumption at projected rates.",
-      businessRuleOutcome: "Business rules confirm electricity UW of $95,000 exceeds T12 historical of $91,000. Test passes with 4.4% cushion.",
-      appraisalData: "Appraisal electricity comparables for common area range from $350 to $420 per unit. Subject UW of $383/unit is within market range."
+      items: [
+        { question: "Does the electricity UW exceed the T12 historical?", answer: "Yes" },
+        { question: "Is the electricity per unit within comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -877,9 +903,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites gas at $73,000 for heating and hot water systems served by Southwest Gas.",
-      businessRuleOutcome: "Business rules confirm gas UW of $73,000 exceeds T12 historical of $71,000. Test passes with 2.8% cushion.",
-      appraisalData: "Appraisal gas expense comparables range from $250 to $350 per unit. Subject UW of $294/unit is appropriately conservative."
+      items: [
+        { question: "Does the gas UW exceed the T12 historical?", answer: "Yes" },
+        { question: "Is the gas per unit within comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -923,9 +950,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender underwrites water/sewer at $112,000 reflecting partial RUBS recovery and City of Phoenix rate schedule.",
-      businessRuleOutcome: "Business rules confirm water/sewer UW of $112,000 exceeds T12 historical of $108,000. Test passes with 3.7% cushion.",
-      appraisalData: "Appraisal water/sewer comparables range from $400 to $500 per unit. Subject UW of $452/unit is within market range."
+      items: [
+        { question: "Does the water/sewer UW exceed the T12 historical?", answer: "Yes" },
+        { question: "Is the water/sewer per unit within comparable range?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -969,9 +997,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender notes trash expense is included in combined utilities category and is not separately tracked.",
-      businessRuleOutcome: "Business rules correctly identify N/A status as trash is bundled with utilities. No separate validation required.",
-      appraisalData: "Appraisal confirms Republic Services contract includes trash collection as part of overall utility package."
+      items: [
+        { question: "Is trash expense tracked separately?", answer: "N/A" },
+        { question: "Is trash bundled with utilities?", answer: "Yes" },
+      ]
     }
   },
 ];
@@ -1022,9 +1051,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender notes management fee of 4.0% of EGI is consistent with market norms for Class B multifamily in Phoenix metro.",
-      businessRuleOutcome: "Business rules confirm management fee of 4.0% is within acceptable 3-5% range. Contract terms are standard with 30-day termination notice.",
-      appraisalData: "Appraisal management fee comparables range from 3.0% to 5.0% of EGI. Subject fee of 4.0% is at market midpoint."
+      items: [
+        { question: "Is the management fee within the acceptable 3-5% range?", answer: "Yes" },
+        { question: "Is the management fee within appraisal comparable range?", answer: "Yes" },
+      ]
     }
   },
 ];
@@ -1083,9 +1113,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender reports real estate taxes of $698,400 annually based on current Maricopa County assessment of $58.2M at 1.20% effective tax rate.",
-      businessRuleOutcome: "Business rules confirm tax assessment of $58.2M is within 15% of current market value of $61.0M. No pending appeals or reassessment risks identified.",
-      appraisalData: "Appraisal confirms current tax assessment is appropriate. Tax burden of $2,816 per unit is consistent with Phoenix metro Class B multifamily averages of $2,600-$3,000 per unit."
+      items: [
+        { question: "Is the tax assessment within 15% of current market value?", answer: "Yes" },
+        { question: "Are there pending appeals or reassessment risks?", answer: "No" },
+        { question: "Is the tax burden per unit within metro averages?", answer: "Yes" },
+      ]
     }
   },
 ];
@@ -1144,9 +1176,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender reports current LTV of 72.4% based on original appraised value of $68.5M with UPB of $44.2M. Loan remains within covenant compliance.",
-      businessRuleOutcome: "Business rules confirm current LTV of 72.4% is below 75% covenant threshold but stress test at 10% value decline would breach at 80.4% LTV.",
-      appraisalData: "Appraisal as-is value of $61.0M reflects 10.9% decline from original. Phoenix MSA multifamily values have compressed 8-12% from peak."
+      items: [
+        { question: "Is the current LTV below the 75% covenant threshold?", answer: "Yes" },
+        { question: "Does a 10% value stress test remain compliant?", answer: "No" },
+        { question: "Has the property value declined from original appraisal?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -1202,9 +1236,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender acknowledges DSCR of 1.08x is below 1.20x covenant minimum. Sponsor has proposed operational improvement plan to restore compliance within 12 months.",
-      businessRuleOutcome: "Business rules confirm DSCR breach: Current 1.08x vs 1.20x minimum represents 0.12x shortfall requiring $428K additional NOI annually.",
-      appraisalData: "Appraisal stabilized DSCR projection of 1.25x assumes market rent growth of 3% and occupancy stabilization at 94%. Current performance trails these assumptions."
+      items: [
+        { question: "Is the DSCR at or above the 1.20x covenant minimum?", answer: "No" },
+        { question: "Has the sponsor proposed a remediation plan?", answer: "Yes" },
+        { question: "Does the stabilized DSCR projection meet the covenant?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -1260,9 +1296,10 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender reports debt yield of 8.7% based on current NOI of $3,850,000 and UPB of $44.2M. Yield covenant of 8.0% minimum remains satisfied.",
-      businessRuleOutcome: "Business rules confirm debt yield of 8.7% exceeds 8.0% minimum with 70 bps cushion. Implied cap rate of 6.2% is within 30 bps of market.",
-      appraisalData: "Appraisal cap rate conclusion of 5.9% based on 6 comparable sales. Subject implied cap of 6.2% reflects 30 bps premium for operational challenges."
+      items: [
+        { question: "Does the debt yield exceed the 8.0% minimum?", answer: "Yes" },
+        { question: "Is the implied cap rate within 50 bps of market?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -1318,9 +1355,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender calculates break-even occupancy at 84.2% with current occupancy of 87.5% providing 3.3% cushion or approximately 8 units of vacancy tolerance.",
-      businessRuleOutcome: "Business rules flag both break-even metrics: Economic break-even of 91.5% exceeds 85% threshold and occupancy break-even of 84.2% exceeds 80% threshold.",
-      appraisalData: "Appraisal break-even analysis assumes stabilized expenses. Current elevated concessions and operating costs push break-even above market norms of 78-82%."
+      items: [
+        { question: "Is the economic break-even below the 85% threshold?", answer: "No" },
+        { question: "Is the occupancy break-even below the 80% threshold?", answer: "No" },
+        { question: "Does the current occupancy provide adequate cushion?", answer: "Yes" },
+      ]
     }
   },
 ];
@@ -1390,9 +1429,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender notes current property manager Greystone has 15+ years experience and manages 45,000+ units. Transition to new manager planned for Q2 2026.",
-      businessRuleOutcome: "Business rules flag management transition as risk factor. While current manager is qualified, transition during performance improvement period creates operational uncertainty.",
-      appraisalData: "Appraisal management analysis notes current team is adequately staffed with 1:41 staff-to-unit ratio. No concerns noted regarding management experience or capabilities."
+      items: [
+        { question: "Does the property manager have 10+ years of experience?", answer: "Yes" },
+        { question: "Is a management transition planned during the review period?", answer: "Yes" },
+        { question: "Is the current staffing ratio adequate?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -1459,9 +1500,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender confirms borrower has maintained excellent reporting compliance with zero late submissions in the past 12 months. All required documents on file.",
-      businessRuleOutcome: "Business rules confirm all reporting requirements satisfied. Insurance certificate valid through April 2026, financial statements current through Q3 2025.",
-      appraisalData: "Appraisal notes property documentation is well-maintained with complete historical financial records available for analysis."
+      items: [
+        { question: "Are all reporting requirements satisfied?", answer: "Yes" },
+        { question: "Is the insurance certificate current and valid?", answer: "Yes" },
+        { question: "Are financial statements current?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -1517,9 +1560,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender reports capital reserve balance of $1.24M with monthly contributions of $25,000 being made as required. Balance is 10x minimum requirement.",
-      businessRuleOutcome: "Business rules confirm reserve balance of $5,000/unit significantly exceeds $500/unit minimum requirement. All funding obligations being met.",
-      appraisalData: "Appraisal capital needs analysis identifies $850K of improvements over 24 months. Current reserve balance provides adequate coverage for planned and contingency CapEx."
+      items: [
+        { question: "Does the reserve balance exceed the minimum requirement?", answer: "Yes" },
+        { question: "Are all funding obligations being met?", answer: "Yes" },
+        { question: "Does the reserve adequately cover planned CapEx?", answer: "Yes" },
+      ]
     }
   },
   {
@@ -1575,9 +1620,11 @@ insight: {
       ],
     },
     comparison: {
-      lenderNarrative: "Lender notes sponsor Sunshine Holdings LLC maintains $45M liquidity and $380M net worth with 15+ year track record and no defaults.",
-      businessRuleOutcome: "Business rules flag 2 properties on watchlist including subject loan. Phoenix market represents 35% of sponsor portfolio, creating concentration risk.",
-      appraisalData: "Appraisal notes sponsor has successfully managed $2.1B multifamily portfolio. Recent market conditions have impacted performance across Phoenix holdings."
+      items: [
+        { question: "Does the sponsor meet minimum liquidity requirements?", answer: "Yes" },
+        { question: "Does the sponsor have other properties on watchlist?", answer: "Yes" },
+        { question: "Is there geographic concentration risk in the portfolio?", answer: "Yes" },
+      ]
     }
   },
 ];
@@ -2068,9 +2115,24 @@ function ComparisonPanel({
   categoryName: string;
   onClose: () => void;
 }) {
+  const answerColor = (answer: string) => {
+    const lower = answer.trim().toLowerCase();
+    if (lower === "yes") return "text-pass bg-pass/10 border-pass/30";
+    if (lower === "no") return "text-fail bg-fail/10 border-fail/30";
+    return "text-muted-foreground bg-muted/40 border-border";
+  };
+
+  const answerIcon = (answer: string) => {
+    const lower = answer.trim().toLowerCase();
+    if (lower === "yes") return <CircleCheckBig className="h-4 w-4 text-pass" />;
+    if (lower === "no") return <CircleX className="h-4 w-4 text-fail" />;
+    return <CircleDot className="h-4 w-4 text-muted-foreground" />;
+  };
+
   return (
     <div className="sticky top-4 rounded-xl border border-accent/30 bg-accent/5 p-5">
-      <div className="mb-4 flex items-center justify-between">
+      {/* Header */}
+      <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <GitCompare className="h-5 w-5 text-accent" />
           <h4 className="text-lg font-semibold text-foreground">
@@ -2085,35 +2147,39 @@ function ComparisonPanel({
         </button>
       </div>
 
-      {/* Lender Narrative */}
-      <div className="mb-4">
-        <h5 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Lender Narrative
-        </h5>
-        <p className="rounded-lg border border-border bg-card p-3 text-base leading-relaxed text-foreground">
-          {comparison.lenderNarrative}
+      {/* Q&A Items */}
+      {comparison.items.length > 0 ? (
+        <div className="space-y-3">
+          {comparison.items.map((item, idx) => (
+            <div
+              key={idx}
+              className="rounded-lg border border-border bg-card p-4 transition-shadow hover:shadow-sm"
+            >
+              <div className="mb-2 flex items-start gap-2">
+                <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <p className="text-sm font-medium leading-snug text-foreground">
+                  {item.question}
+                </p>
+              </div>
+              <div className="ml-6 flex items-center gap-2">
+                {answerIcon(item.answer)}
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2.5 py-1 text-sm font-semibold",
+                    answerColor(item.answer)
+                  )}
+                >
+                  {item.answer}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+          No comparison data available for this category.
         </p>
-      </div>
-
-      {/* Appraisal Data - Moved to middle */}
-      <div className="mb-4">
-        <h5 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Appraisal Data
-        </h5>
-        <p className="rounded-lg border border-border bg-card p-3 text-base leading-relaxed text-foreground">
-          {comparison.appraisalData}
-        </p>
-      </div>
-
-      {/* Business Rule Outcome */}
-      <div>
-        <h5 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Business Rule Outcome
-        </h5>
-        <p className="rounded-lg border border-border bg-card p-3 text-base leading-relaxed text-foreground">
-          {comparison.businessRuleOutcome}
-        </p>
-      </div>
+      )}
     </div>
   );
 }

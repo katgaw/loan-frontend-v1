@@ -54,10 +54,13 @@ interface RiskInsight {
   finalConclusion: string[] | string;
 }
 
+interface ComparisonItem {
+  question: string;
+  answer: string;
+}
+
 interface ComparisonData {
-  lenderNarrative: string;
-  businessRuleOutcome: string;
-  appraisalData: string;
+  items: ComparisonItem[];
 }
 
 interface RuleCategory {
@@ -461,10 +464,10 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                   <div class="space-y-4">
                     @for (category of getCurrentRules(); track category.name) {
                       <div [class]="cn(
-                        'grid gap-4',
+                        'grid gap-4 overflow-hidden',
                         isInsightOpen(category.name) || isComparisonOpen(category.name) ? 'lg:grid-cols-2' : ''
                       )">
-                        <div class="rounded-lg border border-border bg-card">
+                        <div class="rounded-lg border border-border bg-card overflow-hidden">
                           <!-- Category Header -->
                           <div
                             class="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-4 text-left hover:bg-muted/50 transition-colors cursor-pointer"
@@ -823,7 +826,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
 
                       <!-- Comparison Panel for this specific category -->
                       @if (isComparisonOpen(category.name)) {
-                        <div class="rounded-xl border border-accent/30 bg-accent/5 p-5">
+                        <div class="sticky top-4 rounded-xl border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
                         <div class="mb-4 flex items-center justify-between">
                           <div class="flex items-center gap-2">
                             <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -842,25 +845,35 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                             </svg>
                           </button>
                         </div>
-                        <div class="space-y-4">
-                          <div>
-                            <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Lender Narrative</h5>
-                            <p class="rounded-lg border border-border bg-card p-3 text-base leading-relaxed text-foreground">
-                              {{ category.comparison.lenderNarrative || 'Not provided in rule_results.' }}
+                        <div class="space-y-3">
+                          @if (category.comparison.items.length > 0) {
+                            @for (item of category.comparison.items; track $index) {
+                              <div class="rounded-lg border border-border bg-card p-4 transition-shadow hover:shadow-sm">
+                                <div class="mb-2 flex items-start gap-2">
+                                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+                                  </svg>
+                                  <p class="text-sm font-medium leading-snug text-foreground">{{ item.question }}</p>
+                                </div>
+                                <div class="ml-6 flex items-center gap-2">
+                                  @if (item.answer.trim().toLowerCase() === 'yes') {
+                                    <svg class="h-4 w-4 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span class="inline-flex items-center rounded-md border border-pass/30 bg-pass/10 px-2.5 py-1 text-sm font-semibold text-pass">{{ item.answer }}</span>
+                                  } @else if (item.answer.trim().toLowerCase() === 'no') {
+                                    <svg class="h-4 w-4 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span class="inline-flex items-center rounded-md border border-fail/30 bg-fail/10 px-2.5 py-1 text-sm font-semibold text-fail">{{ item.answer }}</span>
+                                  } @else {
+                                    <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><circle cx="12" cy="12" r="3" stroke-width="2"></circle></svg>
+                                    <span class="inline-flex items-center rounded-md border border-border bg-muted/40 px-2.5 py-1 text-sm font-semibold text-muted-foreground">{{ item.answer }}</span>
+                                  }
+                                </div>
+                              </div>
+                            }
+                          } @else {
+                            <p class="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+                              No comparison data available for this category.
                             </p>
-                          </div>
-                          <div>
-                            <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Appraisal Data</h5>
-                            <p class="rounded-lg border border-border bg-card p-3 text-base leading-relaxed text-foreground">
-                              {{ category.comparison.appraisalData || 'Not provided in rule_results.' }}
-                            </p>
-                          </div>
-                          <div>
-                            <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Business Rule Outcome</h5>
-                            <p class="rounded-lg border border-border bg-card p-3 text-base leading-relaxed text-foreground">
-                              {{ category.comparison.businessRuleOutcome || 'See individual rule outcomes by expanding a rule.' }}
-                            </p>
-                          </div>
+                          }
                         </div>
                       </div>
                       }

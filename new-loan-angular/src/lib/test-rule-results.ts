@@ -18,7 +18,17 @@ export interface TestJsonRuleResultsRule {
 export interface TestJsonRuleResultsSummary {
   fact_pattern_summary?: string;
   lender_justification?: string;
+  lender_justification_assessment?: string;
   final_conclusion?: string;
+  compliance_rationale?: string;
+  compliance_finding?: string;
+  calibration?: Array<{
+    property_name?: string;
+    commitment_date?: string;
+    issue_type?: string;
+    relevance_explanation?: string;
+    compliance_rationale?: string;
+  }>;
   [key: string]: unknown;
 }
 
@@ -55,9 +65,7 @@ export interface UiRuleCategory {
     finalConclusion: string[];
   };
   comparison: {
-    lenderNarrative: string;
-    businessRuleOutcome: string;
-    appraisalData: string;
+    items: Array<{ question: string; answer: string }>;
   };
 }
 
@@ -164,9 +172,26 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
         }
         
         const insightObservations = summary?.fact_pattern_summary ? [summary.fact_pattern_summary] : [];
-        const lenderJustification = summary?.lender_justification ? [summary.lender_justification] : [];
-        const finalConclusion = summary?.final_conclusion ? [summary.final_conclusion] : [];
+        const lenderJustification = summary?.lender_justification_assessment 
+          ? [summary.lender_justification_assessment] 
+          : summary?.lender_justification 
+            ? [summary.lender_justification] 
+            : [];
+        const finalConclusion = summary?.compliance_rationale 
+          ? [summary.compliance_rationale] 
+          : summary?.final_conclusion 
+            ? [summary.final_conclusion] 
+            : [];
         
+        // Extract comparisons Q&A from the rule_type_section
+        const rawComparisons = Array.isArray(ruleTypeSection['comparisons']) ? ruleTypeSection['comparisons'] : [];
+        const comparisonItems: Array<{ question: string; answer: string }> = [];
+        for (const c of rawComparisons) {
+          if (isRecord(c) && typeof c['question'] === 'string' && typeof c['answer'] === 'string') {
+            comparisonItems.push({ question: c['question'], answer: c['answer'] });
+          }
+        }
+
         categories.push({
           name: ruleTypeName,
           rules,
@@ -179,9 +204,7 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
             finalConclusion,
           },
           comparison: {
-            lenderNarrative: "Not provided in rule_results.",
-            appraisalData: "Not provided in rule_results.",
-            businessRuleOutcome: "See individual rule outcomes by expanding a rule.",
+            items: comparisonItems,
           },
         });
       }
@@ -211,8 +234,16 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
       }
 
       const insightObservations = summary?.fact_pattern_summary ? [summary.fact_pattern_summary] : [];
-      const lenderJustification = summary?.lender_justification ? [summary.lender_justification] : [];
-      const finalConclusion = summary?.final_conclusion ? [summary.final_conclusion] : [];
+      const lenderJustification = summary?.lender_justification_assessment 
+        ? [summary.lender_justification_assessment] 
+        : summary?.lender_justification 
+          ? [summary.lender_justification] 
+          : [];
+      const finalConclusion = summary?.compliance_rationale 
+        ? [summary.compliance_rationale] 
+        : summary?.final_conclusion 
+          ? [summary.final_conclusion] 
+          : [];
 
       out[sectionName] = Object.entries(grouped).map(([ruleTypeName, rules]) => ({
         name: ruleTypeName,
@@ -226,9 +257,7 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
           finalConclusion,
         },
         comparison: {
-          lenderNarrative: "Not provided in rule_results.",
-          appraisalData: "Not provided in rule_results.",
-          businessRuleOutcome: "See individual rule outcomes by expanding a rule.",
+          items: [],
         },
       }));
     }

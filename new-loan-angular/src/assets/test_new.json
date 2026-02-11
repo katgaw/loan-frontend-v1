@@ -63,10 +63,18 @@
         ],
         "summary": {
             "fact_pattern_summary": "Fact pattern summary",
-            "lender_justification": "Lender justification summary",
-            "final_conclusion": "Final conclusion summary",
-            "citation":[],
-            "deductive_reasoning":"Given the underwritten Other income and the appraisal estimate, the Other Income is less than or equal to the maximum appraisal estimate"
+            "lender_justification_assessment": "Lender justification summary",
+            "compliance_rationale": "Compliance rationale summary",
+            "compliance_finding": "compliant",
+            "calibration": [
+                {
+                    "property_name": "Artisan Residential",
+                    "commitment_date": "2026-01-01",
+                    "issue_type": "Other Income",
+                    "relevance_explanation": "The Other Income is relevant to the loan",
+                    "compliance_rationale": "The Other Income is compliant with the loan"
+                }
+            ]
         }
     },
     "other_expenses": {
@@ -125,11 +133,19 @@
             }
         ],
         "summary": {
-            "fact_pattern_summary": "Fact pattern summary",
-            "lender_justification": "Lender justification summary",
-            "final_conclusion": "Final conclusion summary",
-            "citation":[],
-            "deductive_reasoning":"Given the underwritten Other expenses and the historical T12 Income, the Other Expenses is less than or equal to the historical T12 Income"
+            "fact_pattern_summary": "Fact pattern summary for Other Expenses",
+            "lender_justification_assessment": "Lender justification summary for Other Expenses",
+            "compliance_rationale": "Compliance rationale summary for Other Expenses",
+            "compliance_finding": "compliant",
+            "calibration": [
+                {
+                    "property_name": "Artisan Residential",
+                    "commitment_date": "2026-01-01",
+                    "issue_type": "Other Expenses",
+                    "relevance_explanation": "The Other Expenses is relevant to the loan",
+                    "compliance_rationale": "The Other Expenses is compliant with the loan"
+                }
+            ]
         }
     }
     },
