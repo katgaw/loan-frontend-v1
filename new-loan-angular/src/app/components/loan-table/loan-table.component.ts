@@ -214,7 +214,7 @@ const severityStyles = {
                       <p class="text-xs text-muted-foreground">Compliance Score</p>
                       <div class="flex items-center gap-2 mt-0.5">
                         <span [class]="getComplianceColorClass(loan.complianceScoreData)">
-                          {{ loan.complianceScoreData.passed }}/{{ getNonCompliantCount(loan.complianceScoreData) }}
+                          {{ loan.complianceScoreData.passed }}/{{ loan.complianceScoreData.total }}
                         </span>
                       </div>
                     </div>
@@ -246,10 +246,10 @@ const severityStyles = {
                 <td class="px-4 py-4 align-top">
                   <div class="flex flex-col gap-1.5">
                     <span [class]="getRuleOutcomeClass(loan.rulesOutcome.incomeExpense)" class="inline-block rounded px-2 py-0.5 text-xs font-medium">
-                      I&E: {{ loan.rulesOutcome.incomeExpense.passed }}/{{ getNonCompliantCount(loan.rulesOutcome.incomeExpense) }}
+                      I&E: {{ loan.rulesOutcome.incomeExpense.passed }}/{{ loan.rulesOutcome.incomeExpense.total }}
                     </span>
                     <span [class]="getRuleOutcomeClass(loan.rulesOutcome.valuation)" class="inline-block rounded px-2 py-0.5 text-xs font-medium">
-                      Valuation: {{ loan.rulesOutcome.valuation.passed }}/{{ getNonCompliantCount(loan.rulesOutcome.valuation) }}
+                      Valuation: {{ loan.rulesOutcome.valuation.passed }}/{{ loan.rulesOutcome.valuation.total }}
                     </span>
                   </div>
                 </td>
@@ -363,10 +363,6 @@ export class LoanTableComponent {
     if (percentage >= 70) return 'text-sm font-bold text-pass';
     if (percentage >= 50) return 'text-sm font-bold text-medium';
     return 'text-sm font-bold text-fail';
-  }
-
-  getNonCompliantCount(data: { passed: number; total: number }): number {
-    return Math.max(0, data.total - data.passed);
   }
 
   getRuleOutcomeClass(data: { passed: number; total: number }): string {

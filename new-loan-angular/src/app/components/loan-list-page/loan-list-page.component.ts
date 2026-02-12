@@ -185,8 +185,10 @@ export class LoanListPageComponent implements OnInit {
       next: (data) => {
         const factsLtv = this.extractLTVFromFacts(data);
         const {
+          loanId,
           tlrStatus, dscr, loanAmount, upb, ltv: summaryLtv, riskScore,
           address, city, state, propertyType, units, loanType,
+          acquisitionDate, commitmentDate, lenderName,
         } = this.extractFromLoanSummary(data);
         // Prefer LTV from loan_summary; fall back to facts_lookup extraction
         const ltv = summaryLtv ?? factsLtv;
@@ -215,27 +217,36 @@ export class LoanListPageComponent implements OnInit {
         );
         
         this.loansWithLTV.set(
-          this.loansWithLTV().map((loan) => ({
-            ...loan,
-            ...(loanAmount !== undefined && { loanAmount }),
-            ...(upb !== undefined && { upb }),
-            ...(ltv !== undefined && { ltv }),
-            ...(tlrStatus !== undefined && { tlrStatus }),
-            ...(dscr !== undefined ? { dscr } : { dscr: undefined }),
-            ...(keyRiskAreas !== undefined && { keyRiskAreas }),
-            ...(riskScore !== undefined && { riskScore }),
-            ...(address !== undefined && { address }),
-            ...(city !== undefined && { city }),
-            ...(state !== undefined && { state }),
-            ...(propertyType !== undefined && { propertyType }),
-            ...(units !== undefined && { units }),
-            ...(loanType !== undefined && { loanType }),
-            complianceScoreData,
-            rulesOutcome: {
-              incomeExpense: incomeExpenseOutcome,
-              valuation: valuationOutcome,
-            },
-          }))
+          this.loansWithLTV().map((loan) => {
+            // Only apply overrides to the matching loan when we have an id from JSON.
+            // This prevents one `test_new.json` payload from overwriting every row.
+            if (loanId && String(loan.id) !== String(loanId)) return loan;
+
+            return {
+              ...loan,
+              ...(loanAmount !== undefined && { loanAmount }),
+              ...(upb !== undefined && { upb }),
+              ...(ltv !== undefined && { ltv }),
+              ...(tlrStatus !== undefined && { tlrStatus }),
+              ...(dscr !== undefined ? { dscr } : { dscr: undefined }),
+              ...(keyRiskAreas !== undefined && { keyRiskAreas }),
+              ...(riskScore !== undefined && { riskScore }),
+              ...(address !== undefined && { address }),
+              ...(city !== undefined && { city }),
+              ...(state !== undefined && { state }),
+              ...(propertyType !== undefined && { propertyType }),
+              ...(units !== undefined && { units }),
+              ...(loanType !== undefined && { loanType }),
+              ...(acquisitionDate !== undefined && { acquisitionDate }),
+              ...(commitmentDate !== undefined && { commitmentDate }),
+              ...(lenderName !== undefined && { lenderName }),
+              complianceScoreData,
+              rulesOutcome: {
+                incomeExpense: incomeExpenseOutcome,
+                valuation: valuationOutcome,
+              },
+            };
+          })
         );
       },
       error: () => {
@@ -267,6 +278,7 @@ export class LoanListPageComponent implements OnInit {
   }
 
   private extractFromLoanSummary(data: unknown): {
+    loanId?: string;
     tlrStatus?: 'TLR Completed' | 'TLR Not Completed' | 'unknown';
     dscr?: number;
     loanAmount?: number;
@@ -282,6 +294,9 @@ export class LoanListPageComponent implements OnInit {
     propertyType?: string;
     units?: number;
     loanType?: string;
+    acquisitionDate?: string;
+    commitmentDate?: string;
+    lenderName?: string;
   } {
     if (!data || typeof data !== 'object') return {};
     const loanSummary = (data as Record<string, unknown>)['loan_summary'];
@@ -289,6 +304,7 @@ export class LoanListPageComponent implements OnInit {
     
     const summary = loanSummary as Record<string, unknown>;
     const result: {
+      loanId?: string;
       tlrStatus?: 'TLR Completed' | 'TLR Not Completed' | 'unknown';
       dscr?: number;
       loanAmount?: number;
@@ -301,7 +317,18 @@ export class LoanListPageComponent implements OnInit {
       propertyType?: string;
       units?: number;
       loanType?: string;
+      acquisitionDate?: string;
+      commitmentDate?: string;
+      lenderName?: string;
     } = {};
+
+    // Extract loan_id (used to apply overrides to the right row)
+    const loanIdValue = summary['loan_id'];
+    if (typeof loanIdValue === 'string' && loanIdValue.trim() !== '') {
+      result.loanId = loanIdValue.trim();
+    } else if (typeof loanIdValue === 'number' && Number.isFinite(loanIdValue)) {
+      result.loanId = String(loanIdValue);
+    }
 
     // Extract risk_score (valid only when integer 1..4)
     const rawRisk = summary['risk_score'];
@@ -363,6 +390,22 @@ export class LoanListPageComponent implements OnInit {
     const productType = summary['product_type'];
     if (typeof productType === 'string') {
       result.loanType = productType.trim();
+    }
+
+    // Extract acquisition_date / commitment_date (allow empty string to override demo data)
+    const acquisitionDateValue = summary['acquisition_date'];
+    if (typeof acquisitionDateValue === 'string') {
+      result.acquisitionDate = acquisitionDateValue.trim();
+    }
+    const commitmentDateValue = summary['commitment_date'];
+    if (typeof commitmentDateValue === 'string') {
+      result.commitmentDate = commitmentDateValue.trim();
+    }
+
+    // Extract lender → lenderName (allow empty string to override demo data)
+    const lenderValue = summary['lender'];
+    if (typeof lenderValue === 'string') {
+      result.lenderName = lenderValue.trim();
     }
     
     // Handle both "status" (test_new.json) and "TLR_status" (test.json) for backward compatibility

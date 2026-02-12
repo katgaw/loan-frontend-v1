@@ -190,7 +190,7 @@ function pickLoanSummaryScores(
             </div>
             <div>
               <h2 class="text-2xl font-bold text-foreground">
-                {{ loan.address }} - {{ loan.financing }}
+                {{ loan.address }}
               </h2>
               <p class="text-base text-muted-foreground">
                 {{ loan.address }}, {{ loan.city }}, {{ loan.state }}
@@ -224,7 +224,7 @@ function pickLoanSummaryScores(
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compliance Score</p>
                 <div class="mt-1 flex items-center gap-2">
-                  <p class="text-base font-bold text-foreground">{{ getOverallCompliancePassed() }}/{{ getOverallComplianceNonCompliant() }}</p>
+                  <p class="text-base font-bold text-foreground">{{ getOverallCompliancePassed() }}/{{ getOverallComplianceTotal() }}</p>
                   <div class="flex gap-1">
                     @for (i of [1, 2, 3, 4, 5]; track i) {
                       <div
@@ -485,7 +485,7 @@ function pickLoanSummaryScores(
                             }
                           </div>
                           <span [class]="cn('text-lg font-bold', getComplianceColorClass())">
-                            {{ getCompliancePassed() }}/{{ getComplianceNonCompliant() }}
+                            {{ getCompliancePassed() }}/{{ getComplianceTotal() }}
                           </span>
                         </div>
                       </div>
@@ -508,315 +508,326 @@ function pickLoanSummaryScores(
                 @if (getCurrentRules().length > 0) {
                   <div class="space-y-4">
                     @for (category of getCurrentRules(); track category.name) {
-                      <div [class]="cn(
-                        'grid gap-4 overflow-hidden',
-                        isInsightOpen(category.name) || isComparisonOpen(category.name) ? 'lg:grid-cols-2' : ''
-                      )">
-                        <div class="rounded-lg border border-border bg-card overflow-hidden">
-                          <!-- Category Header -->
-                          <div
-                            class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 cursor-pointer select-none transition-colors hover:bg-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/40"
-                            role="button"
-                            tabindex="0"
-                            [attr.aria-expanded]="isCategoryExpanded(category.name)"
-                            (click)="toggleCategory(category.name)"
-                            (keydown.enter)="toggleCategory(category.name)"
-                            (keydown.space)="toggleCategory(category.name); $event.preventDefault()"
-                          >
-                            <div class="flex min-w-0 items-center gap-3">
-                              <svg
-                                [class]="cn(
-                                  'h-5 w-5 shrink-0 text-muted-foreground transition-transform',
-                                  isCategoryExpanded(category.name) ? 'rotate-180' : 'rotate-0'
-                                )"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                              </svg>
-                              <h3 class="truncate text-xl font-bold text-foreground">{{ category.name }}</h3>
-                            </div>
-                            <div class="flex items-center justify-end gap-2">
-                              <span [class]="cn(
-                                'rounded-md px-3 py-1.5 text-sm font-semibold w-16 text-center',
-                                getCategoryStatus(category) === 'PASS'
-                                  ? 'bg-pass/10 text-pass border border-pass/30'
-                                  : 'bg-fail/10 text-fail border border-fail/30'
-                              )">
-                                {{ getCategoryStatus(category) }}
-                              </span>
-                              @let finding = getCategoryComplianceFindingDisplay(category);
-                              @if (finding) {
-                                <span
-                                  [class]="getCategoryComplianceFindingBadgeClass(category)"
-                                >
-                                  {{ finding }}
-                                </span>
-                              }
-                            </div>
-                            <div class="flex items-center gap-3">
-                              <app-button
-                                variant="ghost"
-                                type="button"
-                                [className]="cn(
-                                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
-                                  isInsightOpen(category.name)
-                                    ? '!bg-purple-100 hover:!bg-purple-100'
-                                    : '!bg-purple-50 hover:!bg-purple-100'
-                                )"
-                                (click)="toggleInsight(category.name); $event.stopPropagation()"
-                                title="View Risk Insight"
-                              >
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                                </svg>
-                                View Insight
-                              </app-button>
-                              <app-button
-                                variant="ghost"
-                                type="button"
-                                [className]="cn(
-                                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
-                                  isComparisonOpen(category.name)
-                                    ? '!bg-purple-100 hover:!bg-purple-100'
-                                    : '!bg-purple-50 hover:!bg-purple-100'
-                                )"
-                                (click)="toggleComparison(category.name); $event.stopPropagation()"
-                                title="View Comparison"
-                              >
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                </svg>
-                                View Comparison
-                              </app-button>
-                            </div>
+                      <div class="rounded-lg border border-border bg-card overflow-hidden">
+                        <!-- Category Header (always full width; never squished by Insight/Comparison) -->
+                        <div
+                          class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 cursor-pointer select-none transition-colors hover:bg-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          role="button"
+                          tabindex="0"
+                          [attr.aria-expanded]="isCategoryExpanded(category.name)"
+                          (click)="toggleCategory(category.name)"
+                          (keydown.enter)="toggleCategory(category.name)"
+                          (keydown.space)="toggleCategory(category.name); $event.preventDefault()"
+                        >
+                          <div class="flex min-w-0 items-center gap-3">
+                            <svg
+                              [class]="cn(
+                                'h-5 w-5 shrink-0 text-muted-foreground transition-transform',
+                                isCategoryExpanded(category.name) ? 'rotate-180' : 'rotate-0'
+                              )"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                            <h3 class="truncate text-xl font-bold text-foreground">{{ category.name }}</h3>
                           </div>
+                          <div class="flex items-center justify-end gap-2">
+                            <span [class]="cn(
+                              'rounded-md px-3 py-1.5 text-sm font-semibold w-16 text-center',
+                              getCategoryStatus(category) === 'PASS'
+                                ? 'bg-pass/10 text-pass border border-pass/30'
+                                : 'bg-fail/10 text-fail border border-fail/30'
+                            )">
+                              {{ getCategoryStatus(category) }}
+                            </span>
+                            @let finding = getCategoryComplianceFindingDisplay(category);
+                            @if (finding) {
+                              <span
+                                [class]="getCategoryComplianceFindingBadgeClass(category)"
+                              >
+                                {{ finding }}
+                              </span>
+                            }
+                          </div>
+                          <div class="flex items-center gap-3">
+                            <app-button
+                              variant="ghost"
+                              type="button"
+                              [className]="cn(
+                                'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
+                                isInsightOpen(category.name)
+                                  ? '!bg-purple-100 hover:!bg-purple-100'
+                                  : '!bg-purple-50 hover:!bg-purple-100'
+                              )"
+                              (click)="toggleInsight(category.name); $event.stopPropagation()"
+                              title="View Risk Insight"
+                            >
+                              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                              </svg>
+                              View Insight
+                            </app-button>
+                            <app-button
+                              variant="ghost"
+                              type="button"
+                              [className]="cn(
+                                'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
+                                isComparisonOpen(category.name)
+                                  ? '!bg-purple-100 hover:!bg-purple-100'
+                                  : '!bg-purple-50 hover:!bg-purple-100'
+                              )"
+                              (click)="toggleComparison(category.name); $event.stopPropagation()"
+                              title="View Comparison"
+                            >
+                              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                              </svg>
+                              View Comparison
+                            </app-button>
+                          </div>
+                        </div>
 
-                          <!-- Rules - collapsible -->
-                          @if (isCategoryExpanded(category.name)) {
-                          <div class="border-t border-border px-5 py-3 space-y-2">
-                              @for (rule of category.rules; track rule.name) {
-                                <div [class]="cn(
-                                  'rounded-xl border transition-colors relative',
-                                  rule.status === 'n/a'
-                                    ? 'border-muted bg-muted/30'
-                                    : rule.status === 'pass'
-                                      ? 'border-border bg-card'
-                                      : 'border-fail/20 bg-fail/[0.02]'
-                                )">
-                                  <!-- Static Header Row -->
-                                  <div class="flex w-full items-center justify-between gap-4 px-5 py-4">
-                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                      <h4 class="text-base font-semibold text-foreground">{{ rule.name }}</h4>
-                                      @if (rule.ruleId) {
-                                        <span class="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                          Rule ID: {{ rule.ruleId }}
-                                        </span>
-                                      }
-                                    </div>
-                                    <div class="flex items-center gap-3 shrink-0">
-                                      <!-- Comment Icon -->
-                                      <button
-                                        type="button"
-                                        (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
-                                        [class]="cn(
-                                          'relative rounded-md p-1.5 transition-colors hover:bg-muted',
-                                          getComment(category.name, rule.name) ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
-                                        )"
-                                        title="Add comment"
-                                      >
-                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                                        </svg>
-                                        @if (getComment(category.name, rule.name)) {
-                                          <span class="absolute -right-1 -top-1 flex h-2 w-2 rounded-full bg-accent"></span>
+                        @if (isCategoryExpanded(category.name) || isInsightOpen(category.name) || isComparisonOpen(category.name)) {
+                          <!-- Content area under the header: rules left, insight/comparison right -->
+                          <div class="border-t border-border p-5">
+                            <div [class]="cn(
+                              'grid gap-4 items-start',
+                              (isInsightOpen(category.name) || isComparisonOpen(category.name))
+                                ? (isCategoryExpanded(category.name)
+                                    ? 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]'
+                                    : 'grid-cols-1')
+                                : 'grid-cols-1'
+                            )">
+                              <!-- Left column (rules) -->
+                              @if (isCategoryExpanded(category.name)) {
+                                <div class="min-w-0 space-y-2">
+                                    @for (rule of category.rules; track rule.name) {
+                                      <div [class]="cn(
+                                        'rounded-xl border transition-colors relative',
+                                        rule.status === 'n/a'
+                                          ? 'border-muted bg-muted/30'
+                                          : rule.status === 'pass'
+                                            ? 'border-border bg-card'
+                                            : 'border-fail/20 bg-fail/[0.02]'
+                                      )">
+                                        <!-- Static Header Row -->
+                                        <div class="flex w-full items-center justify-between gap-4 px-5 py-4">
+                                          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                            <h4 class="text-base font-semibold text-foreground">{{ rule.name }}</h4>
+                                            @if (rule.ruleId) {
+                                              <span class="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                Rule ID: {{ rule.ruleId }}
+                                              </span>
+                                            }
+                                          </div>
+                                          <div class="flex items-center gap-3 shrink-0">
+                                            <!-- Comment Icon -->
+                                            <button
+                                              type="button"
+                                              (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
+                                              [class]="cn(
+                                                'relative rounded-md p-1.5 transition-colors hover:bg-muted',
+                                                getComment(category.name, rule.name) ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
+                                              )"
+                                              title="Add comment"
+                                            >
+                                              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                              </svg>
+                                              @if (getComment(category.name, rule.name)) {
+                                                <span class="absolute -right-1 -top-1 flex h-2 w-2 rounded-full bg-accent"></span>
+                                              }
+                                            </button>
+                                            @if (rule.status === 'n/a') {
+                                              <span class="text-sm font-medium text-muted-foreground shrink-0">N/A</span>
+                                            } @else if (rule.status === 'pass') {
+                                              <svg class="h-6 w-6 shrink-0 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                              </svg>
+                                            } @else {
+                                              <svg class="h-6 w-6 shrink-0 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                              </svg>
+                                            }
+                                          </div>
+                                        </div>
+
+                                        <!-- Comment Popup -->
+                                        @if (getOpenRuleComment(category.name, rule.name)) {
+                                          <div class="mt-2 rounded-lg border border-border bg-card p-4 shadow-sm">
+                                            <div class="mb-3 flex items-center justify-between">
+                                              <h5 class="text-sm font-semibold text-foreground">Comment for: {{ rule.name }}</h5>
+                                              <button
+                                                type="button"
+                                                (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
+                                                class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                              >
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                              </button>
+                                            </div>
+                                            <app-textarea
+                                              [value]="getRuleCommentText(category.name, rule.name)"
+                                              (valueChange)="onRuleCommentTextChange(category.name, rule.name, $event)"
+                                              placeholder="Enter your comment here..."
+                                              className="mb-3 min-h-[100px] resize-none text-sm"
+                                            ></app-textarea>
+                                            <div class="flex justify-end gap-2">
+                                              <app-button
+                                                variant="outline"
+                                                size="sm"
+                                                (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
+                                                className="bg-transparent"
+                                              >
+                                                Cancel
+                                              </app-button>
+                                              <app-button
+                                                size="sm"
+                                                (click)="handleSaveComment(category.name, rule.name, getRuleCommentText(category.name, rule.name)); $event.stopPropagation()"
+                                              >
+                                                Save Comment
+                                              </app-button>
+                                            </div>
+                                          </div>
                                         }
-                                      </button>
-                                      @if (rule.status === 'n/a') {
-                                        <span class="text-sm font-medium text-muted-foreground shrink-0">N/A</span>
-                                      } @else if (rule.status === 'pass') {
-                                        <svg class="h-6 w-6 shrink-0 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                      } @else {
-                                        <svg class="h-6 w-6 shrink-0 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                      }
-                                    </div>
-                                  </div>
+                                      </div>
+                                    }
+                                </div>
+                              }
 
-                                  <!-- Comment Popup -->
-                                  @if (getOpenRuleComment(category.name, rule.name)) {
-                                    <div class="mt-2 rounded-lg border border-border bg-card p-4 shadow-sm">
-                                      <div class="mb-3 flex items-center justify-between">
-                                        <h5 class="text-sm font-semibold text-foreground">Comment for: {{ rule.name }}</h5>
+                              <!-- Right column (Insight / Comparison) -->
+                              @if (isInsightOpen(category.name) || isComparisonOpen(category.name)) {
+                                <div class="space-y-4">
+                                  @if (isInsightOpen(category.name)) {
+                                    <div class="rounded-lg border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
+                                      <div class="mb-4 flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                          <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                          </svg>
+                                          <h4 class="text-lg font-semibold text-foreground">Risk Insight: {{ category.name }}</h4>
+                                        </div>
                                         <button
-                                          type="button"
-                                          (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
-                                          class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                          (click)="toggleInsight(category.name)"
+                                          class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                         >
-                                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                           </svg>
                                         </button>
                                       </div>
-                                      <app-textarea
-                                        [value]="getRuleCommentText(category.name, rule.name)"
-                                        (valueChange)="onRuleCommentTextChange(category.name, rule.name, $event)"
-                                        placeholder="Enter your comment here..."
-                                        className="mb-3 min-h-[100px] resize-none text-sm"
-                                      ></app-textarea>
-                                      <div class="flex justify-end gap-2">
-                                        <app-button
-                                          variant="outline"
-                                          size="sm"
-                                          (click)="toggleRuleComment(category.name, rule.name); $event.stopPropagation()"
-                                          className="bg-transparent"
-                                        >
-                                          Cancel
-                                        </app-button>
-                                        <app-button
-                                          size="sm"
-                                          (click)="handleSaveComment(category.name, rule.name, getRuleCommentText(category.name, rule.name)); $event.stopPropagation()"
-                                        >
-                                          Save Comment
-                                        </app-button>
+                                      <div class="space-y-4">
+                                        <div>
+                                          <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Fact Pattern</h5>
+                                          <div class="rounded-lg border border-border bg-card p-3 space-y-3">
+                                            @if (category.insight.factPattern.facts && category.insight.factPattern.facts.length > 0) {
+                                              <div class="text-base leading-relaxed text-foreground">
+                                                @for (fact of category.insight.factPattern.facts; track fact.label) {
+                                                  <div>
+                                                    <span class="font-semibold">{{ fact.label }}:</span> {{ fact.value }}
+                                                  </div>
+                                                }
+                                              </div>
+                                            }
+                                            @if (getCategoryInsightObservations(category)) {
+                                              <p class="text-base leading-relaxed text-foreground">{{ getCategoryInsightObservations(category) }}</p>
+                                            } @else {
+                                              <p class="text-sm text-muted-foreground italic">No fact pattern summary available.</p>
+                                            }
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Lender Justification</h5>
+                                          <div class="rounded-lg border border-border bg-card p-3">
+                                            @if (getCategoryLenderJustification(category)) {
+                                              <p class="text-base leading-relaxed text-foreground">{{ getCategoryLenderJustification(category) }}</p>
+                                            } @else {
+                                              <p class="text-sm text-muted-foreground italic">No lender justification available.</p>
+                                            }
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Final Conclusion</h5>
+                                          <div class="rounded-lg border border-border bg-card p-3">
+                                            @if (getCategoryFinalConclusion(category)) {
+                                              <p class="text-base leading-relaxed text-foreground">{{ getCategoryFinalConclusion(category) }}</p>
+                                            } @else {
+                                              <p class="text-sm text-muted-foreground italic">No final conclusion available.</p>
+                                            }
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   }
 
-                                </div>
-                              }
-                          </div>
-                          }
-                        </div>
-                      
-                      <!-- Insight Panel for this specific category -->
-                      @if (isInsightOpen(category.name)) {
-                        <div class="rounded-lg border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
-                        <div class="mb-4 flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                            </svg>
-                            <h4 class="text-lg font-semibold text-foreground">Risk Insight: {{ category.name }}</h4>
-                          </div>
-                          <button
-                            (click)="toggleInsight(category.name)"
-                            class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          >
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                          </button>
-                        </div>
-                        <div class="space-y-4">
-                          <div>
-                            <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Fact Pattern</h5>
-                            <div class="rounded-lg border border-border bg-card p-3 space-y-3">
-                              @if (category.insight.factPattern.facts && category.insight.factPattern.facts.length > 0) {
-                                <div class="text-base leading-relaxed text-foreground">
-                                  @for (fact of category.insight.factPattern.facts; track fact.label) {
-                                    <div>
-                                      <span class="font-semibold">{{ fact.label }}:</span> {{ fact.value }}
+                                  @if (isComparisonOpen(category.name)) {
+                                    <div class="sticky top-4 rounded-xl border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
+                                      <div class="mb-4 flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                          <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                          </svg>
+                                          <h4 class="text-lg font-semibold text-foreground">
+                                            Comparison: {{ category.name }}
+                                          </h4>
+                                        </div>
+                                        <button
+                                          (click)="toggleComparison(category.name)"
+                                          class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                        >
+                                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                          </svg>
+                                        </button>
+                                      </div>
+                                      <div class="space-y-3">
+                                        @if (category.comparison.items.length > 0) {
+                                          @for (item of category.comparison.items; track $index) {
+                                            <div class="rounded-lg border border-border bg-card p-4 transition-shadow hover:shadow-sm">
+                                              <div class="mb-2 flex items-start gap-2">
+                                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+                                                </svg>
+                                                <p class="text-sm font-medium leading-snug text-foreground">{{ item.question }}</p>
+                                              </div>
+                                              <div class="ml-6 flex items-center gap-2">
+                                                @if (item.answer.trim().toLowerCase() === 'yes') {
+                                                  <svg class="h-4 w-4 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                  <span class="inline-flex items-center rounded-md border border-pass/30 bg-pass/10 px-2.5 py-1 text-sm font-semibold text-pass">{{ item.answer }}</span>
+                                                } @else if (item.answer.trim().toLowerCase() === 'no') {
+                                                  <svg class="h-4 w-4 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                  <span class="inline-flex items-center rounded-md border border-fail/30 bg-fail/10 px-2.5 py-1 text-sm font-semibold text-fail">{{ item.answer }}</span>
+                                                } @else if (isMultiLineAnswer(item.answer)) {
+                                                  <div class="flex flex-col gap-1">
+                                                    @for (line of splitAnswerLines(item.answer); track $index) {
+                                                      <span class="inline-flex items-center gap-1.5 text-sm text-foreground">
+                                                        {{ line }}
+                                                      </span>
+                                                    }
+                                                  </div>
+                                                } @else {
+                                                  <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><circle cx="12" cy="12" r="3" stroke-width="2"></circle></svg>
+                                                  <span class="inline-flex items-center rounded-md border border-border bg-muted/40 px-2.5 py-1 text-sm font-semibold text-muted-foreground">{{ item.answer }}</span>
+                                                }
+                                              </div>
+                                            </div>
+                                          }
+                                        } @else {
+                                          <p class="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+                                            No comparison data available for this category.
+                                          </p>
+                                        }
+                                      </div>
                                     </div>
                                   }
                                 </div>
                               }
-                              @if (getCategoryInsightObservations(category)) {
-                                <p class="text-base leading-relaxed text-foreground">{{ getCategoryInsightObservations(category) }}</p>
-                              } @else {
-                                <p class="text-sm text-muted-foreground italic">No fact pattern summary available.</p>
-                              }
                             </div>
                           </div>
-                          <div>
-                            <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Lender Justification</h5>
-                            <div class="rounded-lg border border-border bg-card p-3">
-                              @if (getCategoryLenderJustification(category)) {
-                                <p class="text-base leading-relaxed text-foreground">{{ getCategoryLenderJustification(category) }}</p>
-                              } @else {
-                                <p class="text-sm text-muted-foreground italic">No lender justification available.</p>
-                              }
-                            </div>
-                          </div>
-                          <div>
-                            <h5 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Final Conclusion</h5>
-                            <div class="rounded-lg border border-border bg-card p-3">
-                              @if (getCategoryFinalConclusion(category)) {
-                                <p class="text-base leading-relaxed text-foreground">{{ getCategoryFinalConclusion(category) }}</p>
-                              } @else {
-                                <p class="text-sm text-muted-foreground italic">No final conclusion available.</p>
-                              }
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      }
-
-                      <!-- Comparison Panel for this specific category -->
-                      @if (isComparisonOpen(category.name)) {
-                        <div class="sticky top-4 rounded-xl border border-accent/30 bg-accent/5 p-5 max-h-[500px] overflow-y-auto">
-                        <div class="mb-4 flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                            </svg>
-                            <h4 class="text-lg font-semibold text-foreground">
-                              Comparison: {{ category.name }}
-                            </h4>
-                          </div>
-                          <button
-                            (click)="toggleComparison(category.name)"
-                            class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          >
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                          </button>
-                        </div>
-                        <div class="space-y-3">
-                          @if (category.comparison.items.length > 0) {
-                            @for (item of category.comparison.items; track $index) {
-                              <div class="rounded-lg border border-border bg-card p-4 transition-shadow hover:shadow-sm">
-                                <div class="mb-2 flex items-start gap-2">
-                                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
-                                  </svg>
-                                  <p class="text-sm font-medium leading-snug text-foreground">{{ item.question }}</p>
-                                </div>
-                                <div class="ml-6 flex items-center gap-2">
-                                  @if (item.answer.trim().toLowerCase() === 'yes') {
-                                    <svg class="h-4 w-4 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    <span class="inline-flex items-center rounded-md border border-pass/30 bg-pass/10 px-2.5 py-1 text-sm font-semibold text-pass">{{ item.answer }}</span>
-                                  } @else if (item.answer.trim().toLowerCase() === 'no') {
-                                    <svg class="h-4 w-4 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    <span class="inline-flex items-center rounded-md border border-fail/30 bg-fail/10 px-2.5 py-1 text-sm font-semibold text-fail">{{ item.answer }}</span>
-                                  } @else if (isMultiLineAnswer(item.answer)) {
-                                    <div class="flex flex-col gap-1">
-                                      @for (line of splitAnswerLines(item.answer); track $index) {
-                                        <span class="inline-flex items-center gap-1.5 text-sm text-foreground">
-                                          {{ line }}
-                                        </span>
-                                      }
-                                    </div>
-                                  } @else {
-                                    <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><circle cx="12" cy="12" r="3" stroke-width="2"></circle></svg>
-                                    <span class="inline-flex items-center rounded-md border border-border bg-muted/40 px-2.5 py-1 text-sm font-semibold text-muted-foreground">{{ item.answer }}</span>
-                                  }
-                                </div>
-                              </div>
-                            }
-                          } @else {
-                            <p class="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-                              No comparison data available for this category.
-                            </p>
-                          }
-                        </div>
-                      </div>
-                      }
+                        }
                       </div>
                     }
                   </div>
@@ -1296,12 +1307,6 @@ export class LoanDetailComponent implements OnInit {
     return computeComplianceScoreFromCategories(this.getCurrentRules()).passed;
   }
 
-  /** Count of category-level FAIL (non-compliant) for current tab */
-  getComplianceNonCompliant(): number {
-    const { passed, total } = computeComplianceScoreFromCategories(this.getCurrentRules());
-    return Math.max(0, total - passed);
-  }
-
   getComplianceTotal(): number {
     return computeComplianceScoreFromCategories(this.getCurrentRules()).total;
   }
@@ -1309,12 +1314,6 @@ export class LoanDetailComponent implements OnInit {
   /** Sum of category-level PASS counts across ALL sections (Income & Expense + Valuation + ...) */
   getOverallCompliancePassed(): number {
     return computeComplianceScoreFromRuleCategoriesBySection(this.jsonRuleCategoriesBySection()).passed;
-  }
-
-  /** Sum of category-level FAIL counts across ALL sections */
-  getOverallComplianceNonCompliant(): number {
-    const { passed, total } = computeComplianceScoreFromRuleCategoriesBySection(this.jsonRuleCategoriesBySection());
-    return Math.max(0, total - passed);
   }
 
   /** Total number of rule categories across ALL sections */
