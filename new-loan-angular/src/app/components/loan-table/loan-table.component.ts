@@ -173,13 +173,13 @@ const severityStyles = {
                     <div>
                       <p class="text-xs text-muted-foreground">Loan Amt</p>
                       <p class="text-sm font-semibold text-foreground">
-                        {{ formatCurrency(loan.loanAmount) }}
+                        $5.2M
                       </p>
                     </div>
                     <div>
                       <p class="text-xs text-muted-foreground">UPB</p>
                       <p class="text-sm font-medium text-foreground">
-                        {{ formatCurrency(loan.upb) }}
+                        0
                       </p>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -205,16 +205,16 @@ const severityStyles = {
                     <div>
                       <p class="text-xs text-muted-foreground">Risk Score</p>
                       <div class="flex items-center gap-2 mt-0.5">
-                        <span [class]="getRiskScoreColorClass(loan.riskScore)" class="text-base font-bold">
-                          {{ loan.riskScore === null ? 'N/A' : loan.riskScore }}
+                        <span class="text-base font-bold text-muted-foreground">
+                          N/A
                         </span>
                       </div>
                     </div>
                     <div>
                       <p class="text-xs text-muted-foreground">Compliance Score</p>
                       <div class="flex items-center gap-2 mt-0.5">
-                        <span [class]="getComplianceColorClass(loan.complianceScoreData)">
-                          {{ loan.complianceScoreData.passed }}/{{ loan.complianceScoreData.total }}
+                        <span class="text-sm font-bold text-pass">
+                          6/8
                         </span>
                       </div>
                     </div>
@@ -245,11 +245,8 @@ const severityStyles = {
                 <!-- Rules Compliance -->
                 <td class="px-4 py-4 align-top">
                   <div class="flex flex-col gap-1.5">
-                    <span [class]="getRuleOutcomeClass(loan.rulesOutcome.incomeExpense)" class="inline-block rounded px-2 py-0.5 text-xs font-medium">
-                      I&E: {{ loan.rulesOutcome.incomeExpense.passed }}/{{ loan.rulesOutcome.incomeExpense.total }}
-                    </span>
-                    <span [class]="getRuleOutcomeClass(loan.rulesOutcome.valuation)" class="inline-block rounded px-2 py-0.5 text-xs font-medium">
-                      Valuation: {{ loan.rulesOutcome.valuation.passed }}/{{ loan.rulesOutcome.valuation.total }}
+                    <span [class]="getRuleOutcomeClass({ passed: 6, total: 8 })" class="inline-block rounded px-2 py-0.5 text-xs font-medium">
+                      I&E: 6/8
                     </span>
                   </div>
                 </td>
@@ -261,19 +258,27 @@ const severityStyles = {
                       {{ loan.severity }}
                     </span>
                     <div class="flex flex-col gap-1">
-                      @for (riskArea of loan.keyRiskAreas.slice(0, 2); track riskArea) {
-                        <span class="flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-                          <svg class="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                          </svg>
-                          <span class="truncate">{{ keyRiskAreaTitle(riskArea) }}</span>
-                        </span>
-                      }
-                      @if (loan.keyRiskAreas.length > 2) {
-                        <span class="rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                          +{{ loan.keyRiskAreas.length - 2 }} more
-                        </span>
-                      }
+                      <span class="flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                        <svg class="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span class="truncate">Payroll underwriting</span>
+                      </span>
+                      <span class="flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                        <svg class="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span class="truncate">Repair &amp; Maintenance</span>
+                      </span>
+                      <span class="flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                        <svg class="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span class="truncate">Economic vacancy assumption</span>
+                      </span>
+                      <span class="rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        +2 more
+                      </span>
                     </div>
                   </div>
                 </td>
