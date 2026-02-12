@@ -1,4 +1,5 @@
 export type RuleStatus = "pass" | "fail" | "n/a";
+export type ComplianceFinding = "compliant" | "non-compliant" | "n/a";
 
 export interface TestJsonRuleResultsRuleTypeObject {
   name?: string;
@@ -64,6 +65,11 @@ export interface UiRule {
 export interface UiRuleCategory {
   name: string;
   rules: UiRule[];
+  /**
+   * Per-category compliance determination from JSON.
+   * Source: `rule_type_sections[...].summary.compliance_finding`
+   */
+  complianceFinding?: ComplianceFinding;
   insight: {
     factPattern: {
       facts: Array<{ label: string; value: string }>;
@@ -77,8 +83,66 @@ export interface UiRuleCategory {
   };
 }
 
+export function computeComplianceScoreFromCategories(
+  categories: Array<{ rules: Array<{ status: RuleStatus }>; complianceFinding?: ComplianceFinding }>
+): { passed: number; total: number } {
+  let total = 0;
+  let passed = 0;
+
+  for (const cat of categories) {
+    // Preferred: explicit compliant/non-compliant finding.
+    if (cat.complianceFinding === "compliant") {
+      total++;
+      passed++;
+      continue;
+    }
+    if (cat.complianceFinding === "non-compliant") {
+      total++;
+      continue;
+    }
+    if (cat.complianceFinding === "n/a") {
+      // Excluded from compliant/non-compliant denominator.
+      continue;
+    }
+
+    // Fallback: infer from rule statuses (no fails => compliant).
+    const hasFail = cat.rules.some((r) => r.status === "fail");
+    total++;
+    if (!hasFail) passed++;
+  }
+
+  return { passed, total };
+}
+
+export function computeComplianceScoreFromRuleCategoriesBySection(
+  ruleCategoriesBySection:
+    | Record<string, Array<{ rules: Array<{ status: RuleStatus }>; complianceFinding?: ComplianceFinding }>>
+    | null
+    | undefined
+): { passed: number; total: number } {
+  if (!ruleCategoriesBySection) return { passed: 0, total: 0 };
+  let passed = 0;
+  let total = 0;
+  for (const categories of Object.values(ruleCategoriesBySection)) {
+    const part = computeComplianceScoreFromCategories(categories);
+    passed += part.passed;
+    total += part.total;
+  }
+  return { passed, total };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function normalizeComplianceFinding(raw: unknown): ComplianceFinding | undefined {
+  if (typeof raw !== "string") return undefined;
+  const v = raw.trim().toLowerCase();
+  if (!v) return undefined;
+  if (v === "compliant") return "compliant";
+  if (v === "non-compliant" || v === "noncompliant" || v === "non compliant") return "non-compliant";
+  if (v === "n/a" || v === "na" || v === "not applicable") return "n/a";
+  return undefined;
 }
 
 function normalizeRuleTypeName(ruleType: unknown): string {
@@ -223,6 +287,7 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
         categories.push({
           name: ruleTypeName,
           rules,
+          complianceFinding: normalizeComplianceFinding(summary?.compliance_finding),
           insight: {
             factPattern: {
               facts: [],

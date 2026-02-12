@@ -107,6 +107,6 @@ export class PortfolioSummaryComponent {
   }
 
   get criticalLoans(): number {
-    return this.loans.filter((loan) => loan.riskScore >= 3).length;
+    return this.loans.filter((loan) => loan.riskScore !== null && loan.riskScore >= 3).length;
   }
 }

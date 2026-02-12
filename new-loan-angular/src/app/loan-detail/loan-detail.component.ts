@@ -7,7 +7,7 @@ import { TextareaComponent } from '../components/ui/textarea/textarea.component'
 import { loansData, Loan } from '../../lib/loan-data';
 import { cn } from '../../lib/utils';
 import { ApiService } from '../services/api.service';
-import { buildRuleCategoriesBySectionFromTestJson, UiRuleCategory, RuleStatus } from '../../lib/test-rule-results';
+import { buildRuleCategoriesBySectionFromTestJson, UiRuleCategory, RuleStatus, computeComplianceScoreFromCategories, computeComplianceScoreFromRuleCategoriesBySection } from '../../lib/test-rule-results';
 import { parsePropertyAddressFromLoanSummaryStatement, ParsedPropertyAddress } from '../../lib/address';
 
 function formatCurrency(value: number): string {
@@ -66,6 +66,7 @@ interface ComparisonData {
 interface RuleCategory {
   name: string;
   rules: Rule[];
+  complianceFinding?: "compliant" | "non-compliant" | "n/a";
   insight: RiskInsight;
   comparison: ComparisonData;
 }
@@ -82,15 +83,36 @@ function pickLoanSummaryStatement(data: unknown): string | null {
   return typeof statement === "string" ? statement : null;
 }
 
-function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compliance?: { passed: number; total: number } } | null {
+function pickLoanSummaryScores(
+  data: unknown
+): { riskScore?: 1 | 2 | 3 | 4 | null; compliance?: { passed: number; total: number } } | null {
   if (!data || typeof data !== "object") return null;
   const loanSummary = (data as Record<string, unknown>)["loan_summary"];
   if (!loanSummary || typeof loanSummary !== "object") return null;
 
+  // risk_score:
+  // - `1..4` (integer) => valid
+  // - present but not between 1 and 4 => null (display as "N/A")
+  // - missing/blank => undefined (keep base loan value)
   const rawRisk = (loanSummary as Record<string, unknown>)["risk_score"];
-  const risk = typeof rawRisk === "string" ? Number.parseInt(rawRisk, 10) : rawRisk;
-  if (typeof risk !== "number" || !Number.isFinite(risk)) return null;
-  if (risk !== 1 && risk !== 2 && risk !== 3 && risk !== 4) return null;
+  let riskScore: 1 | 2 | 3 | 4 | null | undefined = undefined;
+  const hasRiskField =
+    rawRisk !== undefined &&
+    rawRisk !== null &&
+    !(typeof rawRisk === "string" && rawRisk.trim() === "");
+  if (hasRiskField) {
+    const n =
+      typeof rawRisk === "number"
+        ? rawRisk
+        : typeof rawRisk === "string"
+          ? Number(rawRisk.trim())
+          : Number.NaN;
+    if (Number.isFinite(n) && Number.isInteger(n) && (n === 1 || n === 2 || n === 3 || n === 4)) {
+      riskScore = n as 1 | 2 | 3 | 4;
+    } else {
+      riskScore = null;
+    }
+  }
 
   let compliance: { passed: number; total: number } | undefined;
   const rawCompliance = (loanSummary as Record<string, unknown>)["compliance_score"];
@@ -105,7 +127,10 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
     }
   }
 
-  return { riskScore: risk, compliance };
+  return {
+    ...(riskScore !== undefined ? { riskScore } : {}),
+    ...(compliance ? { compliance } : {}),
+  };
 }
 
 @Component({
@@ -199,7 +224,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compliance Score</p>
                 <div class="mt-1 flex items-center gap-2">
-                  <p class="text-base font-bold text-foreground">{{ getOverallCompliancePassed() }}/{{ getOverallComplianceTotal() }}</p>
+                  <p class="text-base font-bold text-foreground">{{ getOverallCompliancePassed() }}/{{ getOverallComplianceNonCompliant() }}</p>
                   <div class="flex gap-1">
                     @for (i of [1, 2, 3, 4, 5]; track i) {
                       <div
@@ -252,7 +277,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                     <path
                       d="M 11 7 A 14 14 0 0 1 18 5"
                       fill="none"
-                      [attr.stroke]="loan.riskScore <= 2 ? '#22c55e' : '#e5e7eb'"
+                      [attr.stroke]="(loan.riskScore === 1 || loan.riskScore === 2) ? '#22c55e' : '#e5e7eb'"
                       stroke-width="3"
                       stroke-linecap="round"
                     />
@@ -270,22 +295,28 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                       stroke-width="3"
                       stroke-linecap="round"
                     />
-                    <line
-                      x1="18"
-                      y1="20"
-                      [attr.x2]="getSmallGaugeNeedleX(loan.riskScore)"
-                      [attr.y2]="getSmallGaugeNeedleY(loan.riskScore)"
-                      [attr.stroke]="getRiskScoreColor(loan.riskScore)"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                    <circle cx="18" cy="20" r="2.5" [attr.fill]="getRiskScoreColor(loan.riskScore)" />
+                    @if (isRiskScoreValid(loan.riskScore)) {
+                      <line
+                        x1="18"
+                        y1="20"
+                        [attr.x2]="getSmallGaugeNeedleX($any(loan.riskScore))"
+                        [attr.y2]="getSmallGaugeNeedleY($any(loan.riskScore))"
+                        [attr.stroke]="getRiskScoreColor($any(loan.riskScore))"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                      <circle cx="18" cy="20" r="2.5" [attr.fill]="getRiskScoreColor($any(loan.riskScore))" />
+                    } @else {
+                      <circle cx="18" cy="20" r="2.5" fill="#9ca3af" />
+                    }
                   </svg>
                   <span [class]="cn(
                     'text-lg font-bold',
-                    loan.riskScore <= 2 ? 'text-pass' : loan.riskScore === 3 ? 'text-medium' : 'text-fail'
+                    !isRiskScoreValid(loan.riskScore)
+                      ? 'text-muted-foreground'
+                      : (loan.riskScore === 1 || loan.riskScore === 2) ? 'text-pass' : loan.riskScore === 3 ? 'text-medium' : 'text-fail'
                   )">
-                    {{ loan.riskScore }}
+                    {{ isRiskScoreValid(loan.riskScore) ? loan.riskScore : 'N/A' }}
                   </span>
                 </div>
               </div>
@@ -437,7 +468,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                               'text-lg font-bold',
                               getTabRiskScore() === 0 ? 'text-muted-foreground' : getTabRiskScore() <= 2 ? 'text-pass' : getTabRiskScore() === 3 ? 'text-medium' : 'text-fail'
                             )">
-                              {{ getTabRiskScore() }}
+                              {{ getTabRiskScoreDisplay() }}
                             </span>
                           </div>
                         </div>
@@ -454,7 +485,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                             }
                           </div>
                           <span [class]="cn('text-lg font-bold', getComplianceColorClass())">
-                            {{ getCompliancePassed() }}/{{ getComplianceTotal() }}
+                            {{ getCompliancePassed() }}/{{ getComplianceNonCompliant() }}
                           </span>
                         </div>
                       </div>
@@ -484,17 +515,46 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                         <div class="rounded-lg border border-border bg-card overflow-hidden">
                           <!-- Category Header -->
                           <div
-                            class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4"
+                            class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 cursor-pointer select-none transition-colors hover:bg-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/40"
+                            role="button"
+                            tabindex="0"
+                            [attr.aria-expanded]="isCategoryExpanded(category.name)"
+                            (click)="toggleCategory(category.name)"
+                            (keydown.enter)="toggleCategory(category.name)"
+                            (keydown.space)="toggleCategory(category.name); $event.preventDefault()"
                           >
-                            <h3 class="text-xl font-bold text-foreground">{{ category.name }}</h3>
-                            <span [class]="cn(
-                              'rounded-md px-3 py-1.5 text-sm font-semibold w-16 text-center',
-                              getCategoryStatus(category) === 'PASS'
-                                ? 'bg-pass/10 text-pass border border-pass/30'
-                                : 'bg-fail/10 text-fail border border-fail/30'
-                            )">
-                              {{ getCategoryStatus(category) }}
-                            </span>
+                            <div class="flex min-w-0 items-center gap-3">
+                              <svg
+                                [class]="cn(
+                                  'h-5 w-5 shrink-0 text-muted-foreground transition-transform',
+                                  isCategoryExpanded(category.name) ? 'rotate-180' : 'rotate-0'
+                                )"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                              </svg>
+                              <h3 class="truncate text-xl font-bold text-foreground">{{ category.name }}</h3>
+                            </div>
+                            <div class="flex items-center justify-end gap-2">
+                              <span [class]="cn(
+                                'rounded-md px-3 py-1.5 text-sm font-semibold w-16 text-center',
+                                getCategoryStatus(category) === 'PASS'
+                                  ? 'bg-pass/10 text-pass border border-pass/30'
+                                  : 'bg-fail/10 text-fail border border-fail/30'
+                              )">
+                                {{ getCategoryStatus(category) }}
+                              </span>
+                              @let finding = getCategoryComplianceFindingDisplay(category);
+                              @if (finding) {
+                                <span
+                                  [class]="getCategoryComplianceFindingBadgeClass(category)"
+                                >
+                                  {{ finding }}
+                                </span>
+                              }
+                            </div>
                             <div class="flex items-center gap-3">
                               <app-button
                                 variant="ghost"
@@ -502,10 +562,10 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                 [className]="cn(
                                   'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
                                   isInsightOpen(category.name)
-                                    ? '!bg-transparent hover:!bg-accent/10'
-                                    : '!bg-gradient-to-r !from-accent/90 !to-accent hover:!bg-white'
+                                    ? '!bg-purple-100 hover:!bg-purple-100'
+                                    : '!bg-purple-50 hover:!bg-purple-100'
                                 )"
-                                (click)="toggleInsight(category.name)"
+                                (click)="toggleInsight(category.name); $event.stopPropagation()"
                                 title="View Risk Insight"
                               >
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,10 +579,10 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                 [className]="cn(
                                   'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm !border !border-accent !text-accent hover:!shadow-lg hover:!shadow-accent/20 hover:!scale-[1.02]',
                                   isComparisonOpen(category.name)
-                                    ? '!bg-transparent hover:!bg-accent/10'
-                                    : '!bg-gradient-to-r !from-accent/90 !to-accent hover:!bg-white'
+                                    ? '!bg-purple-100 hover:!bg-purple-100'
+                                    : '!bg-purple-50 hover:!bg-purple-100'
                                 )"
-                                (click)="toggleComparison(category.name)"
+                                (click)="toggleComparison(category.name); $event.stopPropagation()"
                                 title="View Comparison"
                               >
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -533,7 +593,8 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                             </div>
                           </div>
 
-                          <!-- Rules - always visible -->
+                          <!-- Rules - collapsible -->
+                          @if (isCategoryExpanded(category.name)) {
                           <div class="border-t border-border px-5 py-3 space-y-2">
                               @for (rule of category.rules; track rule.name) {
                                 <div [class]="cn(
@@ -588,7 +649,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
 
                                   <!-- Comment Popup -->
                                   @if (getOpenRuleComment(category.name, rule.name)) {
-                                    <div class="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-4 shadow-lg">
+                                    <div class="mt-2 rounded-lg border border-border bg-card p-4 shadow-sm">
                                       <div class="mb-3 flex items-center justify-between">
                                         <h5 class="text-sm font-semibold text-foreground">Comment for: {{ rule.name }}</h5>
                                         <button
@@ -629,6 +690,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                 </div>
                               }
                           </div>
+                          }
                         </div>
                       
                       <!-- Insight Panel for this specific category -->
@@ -852,7 +914,7 @@ export class LoanDetailComponent implements OnInit {
   } | null>(null);
   propertyAddressFromFacts = signal<ParsedPropertyAddress | null>(null);
   jsonLoanSummary = signal<Record<string, unknown> | null>(null);
-  loanSummaryScores = signal<{ riskScore: 1 | 2 | 3 | 4; compliance?: { passed: number; total: number } } | null>(null);
+  loanSummaryScores = signal<{ riskScore?: 1 | 2 | 3 | 4 | null; compliance?: { passed: number; total: number } } | null>(null);
   incomePageComment = signal<string>('');
   valuationPageComment = signal<string>('');
   comments = signal<Record<string, Record<string, string>>>({});
@@ -964,6 +1026,10 @@ export class LoanDetailComponent implements OnInit {
   }
 
   // Helper methods for risk score gauge
+  isRiskScoreValid(score: number | null | undefined): score is 1 | 2 | 3 | 4 {
+    return score === 1 || score === 2 || score === 3 || score === 4;
+  }
+
   getRiskScorePath(score: number): string {
     // Calculate arc path for the gauge (semicircle from left to right)
     // Score 1 = leftmost, Score 4 = rightmost
@@ -1033,8 +1099,13 @@ export class LoanDetailComponent implements OnInit {
   // Detailed Rule Analysis methods
   setActiveTab(tab: 'income' | 'valuation') {
     this.activeTab.set(tab);
+    this.expandedCategories.set({});
     this.openCategoryInsight.set(null);
     this.openCategoryComparison.set(null);
+  }
+
+  isCategoryExpanded(categoryName: string): boolean {
+    return !!this.expandedCategories()[categoryName];
   }
 
   toggleCategory(categoryName: string) {
@@ -1180,8 +1251,30 @@ export class LoanDetailComponent implements OnInit {
   }
 
   getCategoryStatus(category: RuleCategory): string {
-    const failCount = category.rules.filter(r => r.status === 'fail').length;
-    return failCount === 0 ? 'PASS' : 'FAIL';
+    if (category.complianceFinding === "compliant") return "PASS";
+    if (category.complianceFinding === "non-compliant") return "FAIL";
+    // Fallback: infer from rule statuses (no fails => compliant).
+    const hasFail = category.rules.some(r => r.status === 'fail');
+    return hasFail ? 'FAIL' : 'PASS';
+  }
+
+  getCategoryComplianceFindingDisplay(category: RuleCategory): string | null {
+    if (category.complianceFinding === "compliant") return "Compliant";
+    if (category.complianceFinding === "non-compliant") return "Noncompliant";
+    if (category.complianceFinding === "n/a") return "N/A";
+    return null;
+  }
+
+  getCategoryComplianceFindingBadgeClass(category: RuleCategory): string {
+    const base =
+      "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm border";
+    if (category.complianceFinding === "compliant") {
+      return `${base} bg-pass/10 text-pass border-pass/30`;
+    }
+    if (category.complianceFinding === "non-compliant") {
+      return `${base} bg-fail/10 text-fail border-fail/30`;
+    }
+    return `${base} bg-muted/40 text-muted-foreground border-border`;
   }
 
   getTabRiskScore(): number {
@@ -1191,37 +1284,42 @@ export class LoanDetailComponent implements OnInit {
     return loan?.riskScore ?? 0;
   }
 
+  getTabRiskScoreDisplay(): string {
+    const rules = this.getCurrentRules();
+    if (rules.length === 0) return '—';
+    const loan = this.displayedLoan();
+    if (!loan) return '—';
+    return loan.riskScore === null ? 'N/A' : String(loan.riskScore ?? 0);
+  }
+
   getCompliancePassed(): number {
-    const categories = this.getCurrentRules();
-    return categories.filter(cat => this.getCategoryStatus(cat) === 'PASS').length;
+    return computeComplianceScoreFromCategories(this.getCurrentRules()).passed;
+  }
+
+  /** Count of category-level FAIL (non-compliant) for current tab */
+  getComplianceNonCompliant(): number {
+    const { passed, total } = computeComplianceScoreFromCategories(this.getCurrentRules());
+    return Math.max(0, total - passed);
   }
 
   getComplianceTotal(): number {
-    return this.getCurrentRules().length;
+    return computeComplianceScoreFromCategories(this.getCurrentRules()).total;
   }
 
   /** Sum of category-level PASS counts across ALL sections (Income & Expense + Valuation + ...) */
   getOverallCompliancePassed(): number {
-    const jsonRules = this.jsonRuleCategoriesBySection();
-    if (!jsonRules) return 0;
-    let passed = 0;
-    for (const sectionCategories of Object.values(jsonRules)) {
-      for (const cat of sectionCategories as unknown as RuleCategory[]) {
-        if (this.getCategoryStatus(cat) === 'PASS') passed++;
-      }
-    }
-    return passed;
+    return computeComplianceScoreFromRuleCategoriesBySection(this.jsonRuleCategoriesBySection()).passed;
+  }
+
+  /** Sum of category-level FAIL counts across ALL sections */
+  getOverallComplianceNonCompliant(): number {
+    const { passed, total } = computeComplianceScoreFromRuleCategoriesBySection(this.jsonRuleCategoriesBySection());
+    return Math.max(0, total - passed);
   }
 
   /** Total number of rule categories across ALL sections */
   getOverallComplianceTotal(): number {
-    const jsonRules = this.jsonRuleCategoriesBySection();
-    if (!jsonRules) return 0;
-    let total = 0;
-    for (const sectionCategories of Object.values(jsonRules)) {
-      total += (sectionCategories as unknown as RuleCategory[]).length;
-    }
-    return total;
+    return computeComplianceScoreFromRuleCategoriesBySection(this.jsonRuleCategoriesBySection()).total;
   }
 
   getComplianceFilledSegments(): number {
@@ -1288,7 +1386,9 @@ export class LoanDetailComponent implements OnInit {
     const hasJson = jsonLoanSummary !== null;
 
     // Calculate display values first (before using them)
-    const displayRiskScore = this.loanSummaryScores()?.riskScore ?? this.loan.riskScore;
+    // Note: use JSON riskScore when present, even if null ("N/A")
+    const extractedRiskScore = this.loanSummaryScores()?.riskScore;
+    const displayRiskScore = extractedRiskScore !== undefined ? extractedRiskScore : this.loan.riskScore;
     const displayCompliance = this.loanSummaryScores()?.compliance ?? this.loan.complianceScoreData;
 
     if (hasJson) {

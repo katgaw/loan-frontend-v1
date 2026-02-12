@@ -206,7 +206,7 @@ const severityStyles = {
                       <p class="text-xs text-muted-foreground">Risk Score</p>
                       <div class="flex items-center gap-2 mt-0.5">
                         <span [class]="getRiskScoreColorClass(loan.riskScore)" class="text-base font-bold">
-                          {{ loan.riskScore }}
+                          {{ loan.riskScore === null ? 'N/A' : loan.riskScore }}
                         </span>
                       </div>
                     </div>
@@ -214,7 +214,7 @@ const severityStyles = {
                       <p class="text-xs text-muted-foreground">Compliance Score</p>
                       <div class="flex items-center gap-2 mt-0.5">
                         <span [class]="getComplianceColorClass(loan.complianceScoreData)">
-                          {{ loan.complianceScoreData.passed }}/{{ loan.complianceScoreData.total }}
+                          {{ loan.complianceScoreData.passed }}/{{ getNonCompliantCount(loan.complianceScoreData) }}
                         </span>
                       </div>
                     </div>
@@ -246,10 +246,10 @@ const severityStyles = {
                 <td class="px-4 py-4 align-top">
                   <div class="flex flex-col gap-1.5">
                     <span [class]="getRuleOutcomeClass(loan.rulesOutcome.incomeExpense)" class="inline-block rounded px-2 py-0.5 text-xs font-medium">
-                      I&E: {{ loan.rulesOutcome.incomeExpense.passed }}/{{ loan.rulesOutcome.incomeExpense.total }}
+                      I&E: {{ loan.rulesOutcome.incomeExpense.passed }}/{{ getNonCompliantCount(loan.rulesOutcome.incomeExpense) }}
                     </span>
                     <span [class]="getRuleOutcomeClass(loan.rulesOutcome.valuation)" class="inline-block rounded px-2 py-0.5 text-xs font-medium">
-                      Valuation: {{ loan.rulesOutcome.valuation.passed }}/{{ loan.rulesOutcome.valuation.total }}
+                      Valuation: {{ loan.rulesOutcome.valuation.passed }}/{{ getNonCompliantCount(loan.rulesOutcome.valuation) }}
                     </span>
                   </div>
                 </td>
@@ -325,7 +325,9 @@ export class LoanTableComponent {
           comparison = a.financing.localeCompare(b.financing);
           break;
         case 'riskScore':
-          comparison = a.riskScore - b.riskScore;
+          const riskSortValue = (score: number | null) =>
+            typeof score === 'number' && Number.isFinite(score) ? score : -Infinity;
+          comparison = riskSortValue(a.riskScore) - riskSortValue(b.riskScore);
           break;
         case 'flagPercentage':
           comparison = a.flagPercentage - b.flagPercentage;
@@ -349,7 +351,8 @@ export class LoanTableComponent {
     this.loanClick.emit(loanId);
   }
 
-  getRiskScoreColorClass(score: number): string {
+  getRiskScoreColorClass(score: number | null): string {
+    if (score === null) return 'text-muted-foreground';
     if (score <= 2) return 'text-pass';
     if (score === 3) return 'text-medium';
     return 'text-fail';
@@ -362,7 +365,12 @@ export class LoanTableComponent {
     return 'text-sm font-bold text-fail';
   }
 
+  getNonCompliantCount(data: { passed: number; total: number }): number {
+    return Math.max(0, data.total - data.passed);
+  }
+
   getRuleOutcomeClass(data: { passed: number; total: number }): string {
+    if (data.total === 0) return 'bg-muted/40 text-muted-foreground';
     if (data.passed === data.total) return 'bg-pass/10 text-pass';
     if (data.passed >= data.total * 0.7) return 'bg-medium/10 text-medium';
     return 'bg-fail/10 text-fail';

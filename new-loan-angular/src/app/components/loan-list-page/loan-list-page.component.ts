@@ -8,6 +8,7 @@ import { RiskAnalysisFiltersComponent } from '../risk-analysis-filters/risk-anal
 import { loansData, Loan } from '../../../lib/loan-data';
 import { ApiService } from '../../services/api.service';
 import { DateRange } from '../date-range-picker/date-range-picker.component';
+import { buildRuleCategoriesBySectionFromTestJson, computeComplianceScoreFromCategories, computeComplianceScoreFromRuleCategoriesBySection } from '../../../lib/test-rule-results';
 
 @Component({
   selector: 'app-loan-list-page',
@@ -166,7 +167,9 @@ export class LoanListPageComponent implements OnInit {
     }
 
     // Default sort by risk score (highest first)
-    filtered.sort((a, b) => b.riskScore - a.riskScore);
+    const riskSortValue = (score: number | null) =>
+      typeof score === 'number' && Number.isFinite(score) ? score : -Infinity;
+    filtered.sort((a, b) => riskSortValue(b.riskScore) - riskSortValue(a.riskScore));
 
     return filtered;
   });
@@ -190,6 +193,26 @@ export class LoanListPageComponent implements OnInit {
 
         // Extract key_risk_areas from risk_insights
         const keyRiskAreas = this.extractKeyRiskAreas(data);
+
+        // Compute compliance score the same way as the loan detail page:
+        // count compliant vs non-compliant categories using `summary.compliance_finding` when present.
+        const ruleCategoriesBySection = buildRuleCategoriesBySectionFromTestJson(data);
+        const complianceScoreData = computeComplianceScoreFromRuleCategoriesBySection(ruleCategoriesBySection);
+        const sectionKeys = Object.keys(ruleCategoriesBySection);
+        const incomeKey = sectionKeys.find((k) => {
+          const s = k.toLowerCase();
+          return s.includes('income') || s.includes('expense');
+        });
+        const valuationKey = sectionKeys.find((k) => {
+          const s = k.toLowerCase();
+          return s.includes('valuation') || s.includes('appraisal');
+        });
+        const incomeExpenseOutcome = computeComplianceScoreFromCategories(
+          (incomeKey ? ruleCategoriesBySection[incomeKey] : []) ?? []
+        );
+        const valuationOutcome = computeComplianceScoreFromCategories(
+          (valuationKey ? ruleCategoriesBySection[valuationKey] : []) ?? []
+        );
         
         this.loansWithLTV.set(
           this.loansWithLTV().map((loan) => ({
@@ -207,6 +230,11 @@ export class LoanListPageComponent implements OnInit {
             ...(propertyType !== undefined && { propertyType }),
             ...(units !== undefined && { units }),
             ...(loanType !== undefined && { loanType }),
+            complianceScoreData,
+            rulesOutcome: {
+              incomeExpense: incomeExpenseOutcome,
+              valuation: valuationOutcome,
+            },
           }))
         );
       },
@@ -244,7 +272,10 @@ export class LoanListPageComponent implements OnInit {
     loanAmount?: number;
     upb?: number;
     ltv?: number;
-    riskScore?: number;
+    /**
+     * `1..4` = valid, `null` = present but invalid/out-of-range, `undefined` = not provided
+     */
+    riskScore?: number | null;
     address?: string;
     city?: string;
     state?: string;
@@ -263,7 +294,7 @@ export class LoanListPageComponent implements OnInit {
       loanAmount?: number;
       upb?: number;
       ltv?: number;
-      riskScore?: number;
+      riskScore?: number | null;
       address?: string;
       city?: string;
       state?: string;
@@ -272,15 +303,25 @@ export class LoanListPageComponent implements OnInit {
       loanType?: string;
     } = {};
 
-    // Extract risk_score (string "1"-"4" in JSON → number)
+    // Extract risk_score (valid only when integer 1..4)
     const rawRisk = summary['risk_score'];
-    if (typeof rawRisk === 'string' && rawRisk.trim() !== '') {
-      const parsed = parseInt(rawRisk, 10);
-      if (parsed >= 1 && parsed <= 4) {
-        result.riskScore = parsed;
+    const hasRiskField =
+      rawRisk !== undefined &&
+      rawRisk !== null &&
+      !(typeof rawRisk === 'string' && rawRisk.trim() === '');
+    if (hasRiskField) {
+      const n =
+        typeof rawRisk === 'number'
+          ? rawRisk
+          : typeof rawRisk === 'string'
+            ? Number(rawRisk.trim())
+            : Number.NaN;
+      if (Number.isFinite(n) && Number.isInteger(n) && n >= 1 && n <= 4) {
+        result.riskScore = n;
+      } else {
+        // Present but not between 1 and 4 -> render as "N/A"
+        result.riskScore = null;
       }
-    } else if (typeof rawRisk === 'number' && rawRisk >= 1 && rawRisk <= 4) {
-      result.riskScore = rawRisk;
     }
 
     // Extract property_name → address

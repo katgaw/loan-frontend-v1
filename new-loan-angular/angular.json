@@ -27,11 +27,6 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              {
-                "glob": "test_new.json",
-                "input": "../",
-                "output": "/assets"
-              }
             ],
             "styles": [
               "src/styles.css"

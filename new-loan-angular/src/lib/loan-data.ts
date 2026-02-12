@@ -28,7 +28,12 @@ export interface Loan {
   loanType: string;
   loanAmount: number;
   upb: number;
-  riskScore: number;
+  /**
+   * Risk score from backend / JSON.
+   * - `1..4`: valid score
+   * - `null`: present but invalid/out-of-range (display as "N/A")
+   */
+  riskScore: number | null;
   flagPercentage: number;
   status: "PASS" | "FAIL" | "WAIVER";
   severity: "Critical" | "High" | "Medium" | "Low";
