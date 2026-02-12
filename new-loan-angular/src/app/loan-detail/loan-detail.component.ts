@@ -215,7 +215,7 @@ function pickLoanSummaryScores(
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product Type</p>
-                <p class="mt-1 text-base font-bold text-foreground">{{ loan.loanType }}</p>
+                <p class="mt-1 text-base font-bold text-foreground">Conventional</p>
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Borrower</p>

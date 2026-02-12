@@ -119,13 +119,13 @@ const severityStyles = {
                       <span class="font-medium text-foreground">Commit:</span>
                       <span class="text-muted-foreground">{{ formatDate(loan.commitmentDate ?? '') }}</span>
                       <span class="font-medium text-foreground">Lender:</span>
-                      <span class="text-muted-foreground">{{ loan.lenderName?.trim() ? loan.lenderName : '—' }}</span>
+                      <span class="text-muted-foreground">Greystone</span>
                       <span class="font-medium text-foreground">UW:</span>
                       <span class="text-muted-foreground">{{ loan.underwriterName?.trim() ? loan.underwriterName : '—' }}</span>
                       <span class="font-medium text-foreground">Orig:</span>
                       <span class="text-muted-foreground">{{ loan.originatorName?.trim() ? loan.originatorName : '—' }}</span>
                       <span class="font-medium text-foreground">Deleg:</span>
-                      <span class="text-muted-foreground">{{ loan.delegationType ?? '—' }}</span>
+                      <span class="text-muted-foreground">Pre-review</span>
                     </div>
                   </div>
                 </td>
