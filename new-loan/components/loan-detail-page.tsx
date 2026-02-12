@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { buildRuleCategoriesBySectionFromTestJson, type UiRuleCategory } from "@/lib/test-rule-results";
@@ -87,7 +87,7 @@ interface RuleCategory {
 
 type LoanSummaryScores = {
   riskScore: 1 | 2 | 3 | 4;
-  compliance: { passed: number; total: number };
+  compliance?: { passed: number; total: number };
 };
 
 function pickLoanSummaryStatement(data: unknown): string | null {
@@ -110,15 +110,20 @@ function pickLoanSummaryScores(data: unknown): LoanSummaryScores | null {
   if (typeof risk !== "number" || !Number.isFinite(risk)) return null;
   if (risk !== 1 && risk !== 2 && risk !== 3 && risk !== 4) return null;
 
+  let compliance: { passed: number; total: number } | undefined;
   const rawCompliance = (loanSummary as Record<string, unknown>)["compliance_score"];
-  if (typeof rawCompliance !== "string") return null;
-  const parts = rawCompliance.split("/").map((p) => p.trim());
-  if (parts.length !== 2) return null;
-  const passed = Number.parseInt(parts[0] ?? "", 10);
-  const total = Number.parseInt(parts[1] ?? "", 10);
-  if (!Number.isFinite(passed) || !Number.isFinite(total) || total <= 0) return null;
+  if (typeof rawCompliance === "string") {
+    const parts = rawCompliance.split("/").map((p) => p.trim());
+    if (parts.length === 2) {
+      const passed = Number.parseInt(parts[0] ?? "", 10);
+      const total = Number.parseInt(parts[1] ?? "", 10);
+      if (Number.isFinite(passed) && Number.isFinite(total) && total > 0) {
+        compliance = { passed, total };
+      }
+    }
+  }
 
-  return { riskScore: risk, compliance: { passed, total } };
+  return { riskScore: risk, compliance };
 }
 
 // Loan details data
@@ -1830,9 +1835,31 @@ function RuleCard({
   const [commentText, setCommentText] = useState(comment || "");
   const [openSubruleComment, setOpenSubruleComment] = useState<string | null>(null);
   const [subruleCommentText, setSubruleCommentText] = useState<Record<string, string>>(subruleComments || {});
+  const commentRef = useRef<HTMLDivElement>(null);
+  const subruleCommentRef = useRef<HTMLDivElement>(null);
   const isPassing = rule.status === "pass";
   const isNA = rule.status === "n/a";
   
+  const handleToggleComment = () => {
+    const willOpen = !isCommentOpen;
+    setIsCommentOpen(willOpen);
+    if (willOpen) {
+      setTimeout(() => {
+        commentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 50);
+    }
+  };
+
+  const handleToggleSubruleComment = (subruleName: string) => {
+    const willOpen = openSubruleComment !== subruleName;
+    setOpenSubruleComment(willOpen ? subruleName : null);
+    if (willOpen) {
+      setTimeout(() => {
+        subruleCommentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 50);
+    }
+  };
+
   const handleSaveComment = () => {
     onSaveComment(rule.name, commentText);
     setIsCommentOpen(false);
@@ -1841,7 +1868,7 @@ function RuleCard({
   return (
     <div
       className={cn(
-        "rounded-xl border transition-colors relative",
+        "rounded-xl border transition-colors",
         isNA
           ? "border-muted bg-muted/30"
           : isPassing
@@ -1876,7 +1903,7 @@ function RuleCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setIsCommentOpen(!isCommentOpen);
+              handleToggleComment();
             }}
             className={cn(
               "relative rounded-md p-1.5 transition-colors hover:bg-muted",
@@ -1899,9 +1926,9 @@ function RuleCard({
         </div>
       </div>
       
-      {/* Comment Popup */}
+      {/* Comment Section - inline expansion */}
       {isCommentOpen && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-4 shadow-lg">
+        <div ref={commentRef} className="border-t border-border bg-muted/20 p-4">
           <div className="mb-3 flex items-center justify-between">
             <h5 className="text-sm font-semibold text-foreground">Comment for: {rule.name}</h5>
             <button
@@ -1948,7 +1975,7 @@ function RuleCard({
               <h5 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Subrules</h5>
               <div className="space-y-2">
                 {rule.subrules.map((subrule, index) => (
-                  <div key={index} className="relative">
+                  <div key={index}>
                     <div
                       className={cn(
                         "flex items-center justify-between gap-4 rounded-lg border p-3",
@@ -1979,7 +2006,7 @@ function RuleCard({
                         {/* Subrule Comment Button */}
                         <button
                           type="button"
-                          onClick={() => setOpenSubruleComment(openSubruleComment === subrule.name ? null : subrule.name)}
+                          onClick={() => handleToggleSubruleComment(subrule.name)}
                           className={cn(
                             "rounded-md p-1 transition-colors hover:bg-muted",
                             subruleCommentText[subrule.name] ? "text-accent" : "text-muted-foreground hover:text-foreground"
@@ -1997,9 +2024,9 @@ function RuleCard({
                         )}
                       </div>
                     </div>
-                    {/* Subrule Comment Popup */}
+                    {/* Subrule Comment Section - inline expansion */}
                     {openSubruleComment === subrule.name && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-3 shadow-lg">
+                      <div ref={subruleCommentRef} className="mt-2 rounded-lg border border-border bg-muted/20 p-3">
                         <div className="mb-2 flex items-center justify-between">
                           <h6 className="text-xs font-semibold text-foreground">Comment: {subrule.name}</h6>
                           <button
@@ -2490,7 +2517,7 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
     jsonLoanNumberCandidate === selectedLoan.loanNumber;
 
   const narrativeText =
-    hasJsonLoanSummary ? jsonRiskInsights?.summary_narrative?.trim() : null;
+    jsonRiskInsights?.summary_narrative?.trim() || null;
   const narrativeParagraphs =
     narrativeText && narrativeText.length > 0
       ? narrativeText.split(/\n\s*\n/).filter(Boolean)
@@ -2499,10 +2526,10 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
         : [summaryNarrative.overview, summaryNarrative.riskAssessment];
 
   const keyRiskAreas =
-    selectedLoan?.keyRiskAreas?.length
-      ? selectedLoan.keyRiskAreas
-      : hasJsonLoanSummary && jsonRiskInsights?.key_risk_areas && jsonRiskInsights.key_risk_areas.length > 0
-        ? jsonRiskInsights.key_risk_areas
+    jsonRiskInsights?.key_risk_areas && jsonRiskInsights.key_risk_areas.length > 0
+      ? jsonRiskInsights.key_risk_areas
+      : selectedLoan?.keyRiskAreas?.length
+        ? selectedLoan.keyRiskAreas
         : summaryNarrative.keyRiskAreas;
 
   const displayRiskScore = loanSummaryScores?.riskScore ?? baseLoanDetails.riskScore;
@@ -2801,11 +2828,11 @@ const analysisData = {
                 );
 
               const passed =
-                loanSummaryScores?.compliance.passed ??
+                loanSummaryScores?.compliance?.passed ??
                 selectedLoan?.complianceScoreData.passed ??
                 fallbackPassed;
               const total =
-                loanSummaryScores?.compliance.total ??
+                loanSummaryScores?.compliance?.total ??
                 selectedLoan?.complianceScoreData.total ??
                 fallbackTotal;
               const percentage = total > 0 ? (passed / total) * 100 : 0;
@@ -2985,11 +3012,11 @@ const analysisData = {
                     );
 
                     const passed =
-                      loanSummaryScores?.compliance.passed ??
+                      loanSummaryScores?.compliance?.passed ??
                       selectedLoan?.complianceScoreData.passed ??
                       fallbackPassed;
                     const total =
-                      loanSummaryScores?.compliance.total ??
+                      loanSummaryScores?.compliance?.total ??
                       selectedLoan?.complianceScoreData.total ??
                       fallbackTotal;
 const percentage = total > 0 ? (passed / total) * 100 : 0;

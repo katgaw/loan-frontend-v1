@@ -253,11 +253,13 @@ function QuestionCard({
           <h4 className="text-base font-medium text-foreground">{question.question}</h4>
         </button>
         <div className="flex items-center gap-4">
-          {/* Response Display (Read-only) */}
-          <div className={cn("flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5", responseColor)}>
-            {responseIcon}
-            <span className="text-sm font-medium">{question.response}</span>
-          </div>
+          {/* Response Display (Read-only) - only show for Yes/No */}
+          {question.response !== "N/A" && (
+            <div className={cn("flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5", responseColor)}>
+              {responseIcon}
+              <span className="text-sm font-medium">{question.response}</span>
+            </div>
+          )}
           {/* Comment Icon */}
           <button
             type="button"

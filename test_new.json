@@ -29,10 +29,27 @@
                 "rule_conformity": "N/A"
             }
         ],
+        "rule_details":[
+            {
+                "rule_id": "other_income_000",
+                "description": "Other Income is less than or equal to the maximum appraisal estimate",
+                "result": "PASS"
+            },
+            {
+                "rule_id": "other_income_001",
+                "description": "Other Income is less than or equal to the historical T12 Income",
+                "result": "FAIL"
+            },
+            {
+                "rule_id": "other_income_002",
+                "description": "Other Income is less than or equal to the Insight estimate - Other Income",
+                "result": "N/A"
+            }
+        ],
         "comparisons": [
             {
                 "question": "Is the Other Income less than or equal to the maximum appraisal estimate?",
-                "answer": "Yes"
+                "answer": "\u2022 Lender Yes \\n\u2022 AI Yes"
             },
             {
                 "question": "Is the Other Income less than or equal to the historical T12 Income?",
@@ -63,10 +80,18 @@
         ],
         "summary": {
             "fact_pattern_summary": "Fact pattern summary",
-            "lender_justification": "Lender justification summary",
-            "final_conclusion": "Final conclusion summary",
-            "citation":[],
-            "deductive_reasoning":"Given the underwritten Other income and the appraisal estimate, the Other Income is less than or equal to the maximum appraisal estimate"
+            "lender_justification_assessment": "Lender justification summary",
+            "compliance_finding": "compliant",
+            "compliance_rationale": "Compliance rationale summary",
+            "calibration": [
+                {
+                    "property_name": "Artisan Residential",
+                    "commitment_date": "2026-01-01",
+                    "issue_type": "Other Income",
+                    "relevance_explanation": "The Other Income is relevant to the loan",
+                    "compliance_rationale": "The Other Income is compliant with the loan"
+                }
+            ]
         }
     },
     "other_expenses": {
@@ -90,6 +115,23 @@
                 "textual_rule": "Other Expenses is less than or equal to the Insight estimate - Other Expenses",
                 "rule_outcome": "Other Expenses is less than or equal to the Insight estimate - Other Expenses",
                 "rule_conformity": "N/A"
+            }
+        ],
+        "rule_details":[
+            {
+                "rule_id": "other_expenses_000",
+                "description": "Other Expenses is less than or equal to the maximum appraisal estimate",
+                "result": "PASS"
+            },
+            {
+                "rule_id": "other_expenses_001",
+                "description": "Other Expenses is less than or equal to the historical T12 Income",
+                "result": "FAIL"
+            },
+            {
+                "rule_id": "other_expenses_002",
+                "description": "Other Expenses is less than or equal to the Insight estimate - Other Expenses",
+                "result": "N/A"
             }
         ],
         "comparisons": [
@@ -126,10 +168,18 @@
         ],
         "summary": {
             "fact_pattern_summary": "Fact pattern summary",
-            "lender_justification": "Lender justification summary",
-            "final_conclusion": "Final conclusion summary",
-            "citation":[],
-            "deductive_reasoning":"Given the underwritten Other expenses and the historical T12 Income, the Other Expenses is less than or equal to the historical T12 Income"
+            "lender_justification_assessment": "Lender justification summary",
+            "compliance_finding": "compliant",
+            "compliance_rationale": "Compliance rationale summary",
+            "calibration": [
+                {
+                    "property_name": "Artisan Residential",
+                    "commitment_date": "2026-01-01",
+                    "issue_type": "Other Income",
+                    "relevance_explanation": "The Other Income is relevant to the loan",
+                    "compliance_rationale": "The Other Income is compliant with the loan"
+                }
+            ]
         }
     }
     },
@@ -146,25 +196,25 @@
     "borrower":"",
     "property_name": "Artisan Residential",
     "property_type":"Multifamily",
-    "loan_amount":"45,500,000",
+    "loan_amount":"50,500,000",
     "acquisition_date":"",
     "commitment_date":"",
     "maturity_date":"",
     "lender":"",
-    "upb":"0.0",
-    "product_type":"",
-    "units":"0",
+    "upb":"50",
+    "product_type":"refinance",
+    "units":"200",
     "city":"Bentonville",
     "state":"VA",
-    "risk_score":"3",
-    "compliance_score":"10/20",
+    "risk_score":"1",
     "status":"unknown",
-    "DSCR":""
+    "DSCR":"",
+    "LTV":""
 },
 
 "risk_insights": {
     "summary_narrative": "Summary narrative",
-    "key_risk_areas": ["Key risk areas","Key risk areas 2"],
+    "key_risk_areas": ["Key risk areas: this sucks","Key risk areas 2: this also sucks"],
     "suggestions": ["Suggestion 1","Suggestion 2"],
     "strengths": ["Strength 1","Strength 2"],
     "weaknesses": ["Weakness 1","Weakness 2"]

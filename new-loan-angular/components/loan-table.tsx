@@ -414,15 +414,21 @@ export function LoanTable({ loans, onLoanClick, filtersSlot }: LoanTableProps) {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      <span className="rounded bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-                        {loan.propertyType}
-                      </span>
-                      <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {loan.units > 1 ? `${loan.units} Units` : "Single Asset"}
-                      </span>
-                      <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {loan.loanType}
-                      </span>
+                      {loan.propertyType && (
+                        <span className="rounded bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                          {loan.propertyType}
+                        </span>
+                      )}
+                      {loan.units > 0 && (
+                        <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {loan.units > 1 ? `${loan.units} Units` : "Single Asset"}
+                        </span>
+                      )}
+                      {loan.loanType && (
+                        <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {loan.loanType}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </td>

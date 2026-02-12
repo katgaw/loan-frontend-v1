@@ -33,10 +33,10 @@ import { DateRange } from '../date-range-picker/date-range-picker.component';
       </div>
 
       <!-- Portfolio Summary -->
-      <app-portfolio-summary></app-portfolio-summary>
+      <app-portfolio-summary [loans]="loansWithLTV()"></app-portfolio-summary>
 
       <!-- Results by Risk Category -->
-      <app-system-recommendations></app-system-recommendations>
+      <app-system-recommendations [loans]="loansWithLTV()"></app-system-recommendations>
 
       <!-- Loan Table with Filters -->
       <app-loan-table 
@@ -180,15 +180,33 @@ export class LoanListPageComponent implements OnInit {
   private loadTestJson() {
     this.apiService.getTestJson().subscribe({
       next: (data) => {
-        const ltv = this.extractLTVFromFacts(data);
-        const { tlrStatus, dscr } = this.extractFromLoanSummary(data);
+        const factsLtv = this.extractLTVFromFacts(data);
+        const {
+          tlrStatus, dscr, loanAmount, upb, ltv: summaryLtv, riskScore,
+          address, city, state, propertyType, units, loanType,
+        } = this.extractFromLoanSummary(data);
+        // Prefer LTV from loan_summary; fall back to facts_lookup extraction
+        const ltv = summaryLtv ?? factsLtv;
+
+        // Extract key_risk_areas from risk_insights
+        const keyRiskAreas = this.extractKeyRiskAreas(data);
         
         this.loansWithLTV.set(
           this.loansWithLTV().map((loan) => ({
             ...loan,
+            ...(loanAmount !== undefined && { loanAmount }),
+            ...(upb !== undefined && { upb }),
             ...(ltv !== undefined && { ltv }),
             ...(tlrStatus !== undefined && { tlrStatus }),
             ...(dscr !== undefined ? { dscr } : { dscr: undefined }),
+            ...(keyRiskAreas !== undefined && { keyRiskAreas }),
+            ...(riskScore !== undefined && { riskScore }),
+            ...(address !== undefined && { address }),
+            ...(city !== undefined && { city }),
+            ...(state !== undefined && { state }),
+            ...(propertyType !== undefined && { propertyType }),
+            ...(units !== undefined && { units }),
+            ...(loanType !== undefined && { loanType }),
           }))
         );
       },
@@ -223,6 +241,16 @@ export class LoanListPageComponent implements OnInit {
   private extractFromLoanSummary(data: unknown): {
     tlrStatus?: 'TLR Completed' | 'TLR Not Completed' | 'unknown';
     dscr?: number;
+    loanAmount?: number;
+    upb?: number;
+    ltv?: number;
+    riskScore?: number;
+    address?: string;
+    city?: string;
+    state?: string;
+    propertyType?: string;
+    units?: number;
+    loanType?: string;
   } {
     if (!data || typeof data !== 'object') return {};
     const loanSummary = (data as Record<string, unknown>)['loan_summary'];
@@ -232,7 +260,69 @@ export class LoanListPageComponent implements OnInit {
     const result: {
       tlrStatus?: 'TLR Completed' | 'TLR Not Completed' | 'unknown';
       dscr?: number;
+      loanAmount?: number;
+      upb?: number;
+      ltv?: number;
+      riskScore?: number;
+      address?: string;
+      city?: string;
+      state?: string;
+      propertyType?: string;
+      units?: number;
+      loanType?: string;
     } = {};
+
+    // Extract risk_score (string "1"-"4" in JSON → number)
+    const rawRisk = summary['risk_score'];
+    if (typeof rawRisk === 'string' && rawRisk.trim() !== '') {
+      const parsed = parseInt(rawRisk, 10);
+      if (parsed >= 1 && parsed <= 4) {
+        result.riskScore = parsed;
+      }
+    } else if (typeof rawRisk === 'number' && rawRisk >= 1 && rawRisk <= 4) {
+      result.riskScore = rawRisk;
+    }
+
+    // Extract property_name → address
+    const propertyName = summary['property_name'];
+    if (typeof propertyName === 'string' && propertyName.trim() !== '') {
+      result.address = propertyName.trim();
+    }
+
+    // Extract city
+    const cityValue = summary['city'];
+    if (typeof cityValue === 'string' && cityValue.trim() !== '') {
+      result.city = cityValue.trim();
+    }
+
+    // Extract state
+    const stateValue = summary['state'];
+    if (typeof stateValue === 'string' && stateValue.trim() !== '') {
+      result.state = stateValue.trim();
+    }
+
+    // Extract property_type → propertyType
+    const propertyTypeValue = summary['property_type'];
+    if (typeof propertyTypeValue === 'string' && propertyTypeValue.trim() !== '') {
+      result.propertyType = propertyTypeValue.trim();
+    }
+
+    // Extract units (string in JSON → number)
+    const unitsValue = summary['units'];
+    if (typeof unitsValue === 'string' && unitsValue.trim() !== '') {
+      const parsed = parseInt(unitsValue, 10);
+      if (Number.isFinite(parsed)) {
+        result.units = parsed;
+      }
+    } else if (typeof unitsValue === 'number' && Number.isFinite(unitsValue)) {
+      result.units = unitsValue;
+    }
+
+    // Extract product_type → loanType (empty string overrides hardcoded default)
+    const productType = summary['product_type'];
+    if (typeof productType === 'string') {
+      result.loanType = productType.trim();
+    }
     
     // Handle both "status" (test_new.json) and "TLR_status" (test.json) for backward compatibility
     const tlrStatusValue = summary['status'] || summary['TLR_status'];
@@ -250,11 +340,53 @@ export class LoanListPageComponent implements OnInit {
         result.dscr = parsed;
       }
     } else if (dscrValue === '' || dscrValue === null || dscrValue === undefined) {
-      // Empty string means no information, so leave dscr undefined
       result.dscr = undefined;
+    }
+
+    // Extract loan_amount (may contain commas, e.g. "45,500,000")
+    const loanAmountValue = summary['loan_amount'];
+    if (typeof loanAmountValue === 'string' && loanAmountValue.trim() !== '') {
+      const parsed = parseFloat(loanAmountValue.replace(/,/g, ''));
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        result.loanAmount = parsed;
+      }
+    } else if (typeof loanAmountValue === 'number' && Number.isFinite(loanAmountValue)) {
+      result.loanAmount = loanAmountValue;
+    }
+
+    // Extract upb
+    const upbValue = summary['upb'];
+    if (typeof upbValue === 'string' && upbValue.trim() !== '') {
+      const parsed = parseFloat(upbValue.replace(/,/g, ''));
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        result.upb = parsed;
+      }
+    } else if (typeof upbValue === 'number' && Number.isFinite(upbValue)) {
+      result.upb = upbValue;
+    }
+
+    // Extract LTV
+    const ltvValue = summary['LTV'];
+    if (typeof ltvValue === 'string' && ltvValue.trim() !== '') {
+      const parsed = parseFloat(ltvValue.replace(/%/g, ''));
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        result.ltv = parsed;
+      }
+    } else if (typeof ltvValue === 'number' && Number.isFinite(ltvValue)) {
+      result.ltv = ltvValue;
     }
     
     return result;
+  }
+
+  private extractKeyRiskAreas(data: unknown): string[] | undefined {
+    if (!data || typeof data !== 'object') return undefined;
+    const riskInsights = (data as Record<string, unknown>)['risk_insights'];
+    if (!riskInsights || typeof riskInsights !== 'object') return undefined;
+    const areas = (riskInsights as Record<string, unknown>)['key_risk_areas'];
+    if (!Array.isArray(areas) || areas.length === 0) return undefined;
+    const strings = areas.filter((a): a is string => typeof a === 'string' && a.trim() !== '');
+    return strings.length > 0 ? strings : undefined;
   }
 
   onLoanClick(loanId: string) {

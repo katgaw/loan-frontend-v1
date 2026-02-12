@@ -21,12 +21,8 @@ export function PortfolioSummary() {
   const totalRules = loansData.reduce((acc, loan) => acc + loan.complianceScoreData.total, 0);
   const percentageCompliant = totalRules > 0 ? Math.round((totalPassed / totalRules) * 100) : 0;
 
-  // Calculate percentage of rules failed
-  const totalFailed = loansData.reduce(
-    (acc, loan) => acc + Math.max(0, loan.complianceScoreData.total - loan.complianceScoreData.passed),
-    0
-  );
-  const percentageFailed = totalRules > 0 ? Math.round((totalFailed / totalRules) * 100) : 0;
+  // Percentage failed is simply the complement of percentage compliant
+  const percentageFailed = 100 - percentageCompliant;
 
   const criticalLoans = loansData.filter((loan) => loan.riskScore >= 3).length;
 

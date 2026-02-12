@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { buildRuleCategoriesBySectionFromTestJson, type UiRuleCategory } from "@/lib/test-rule-results";
@@ -90,7 +90,7 @@ interface RuleCategory {
 
 type LoanSummaryScores = {
   riskScore: 1 | 2 | 3 | 4;
-  compliance: { passed: number; total: number };
+  compliance?: { passed: number; total: number };
 };
 
 function pickLoanSummaryStatement(data: unknown): string | null {
@@ -113,15 +113,20 @@ function pickLoanSummaryScores(data: unknown): LoanSummaryScores | null {
   if (typeof risk !== "number" || !Number.isFinite(risk)) return null;
   if (risk !== 1 && risk !== 2 && risk !== 3 && risk !== 4) return null;
 
+  let compliance: { passed: number; total: number } | undefined;
   const rawCompliance = (loanSummary as Record<string, unknown>)["compliance_score"];
-  if (typeof rawCompliance !== "string") return null;
-  const parts = rawCompliance.split("/").map((p) => p.trim());
-  if (parts.length !== 2) return null;
-  const passed = Number.parseInt(parts[0] ?? "", 10);
-  const total = Number.parseInt(parts[1] ?? "", 10);
-  if (!Number.isFinite(passed) || !Number.isFinite(total) || total <= 0) return null;
+  if (typeof rawCompliance === "string") {
+    const parts = rawCompliance.split("/").map((p) => p.trim());
+    if (parts.length === 2) {
+      const passed = Number.parseInt(parts[0] ?? "", 10);
+      const total = Number.parseInt(parts[1] ?? "", 10);
+      if (Number.isFinite(passed) && Number.isFinite(total) && total > 0) {
+        compliance = { passed, total };
+      }
+    }
+  }
 
-  return { riskScore: risk, compliance: { passed, total } };
+  return { riskScore: risk, compliance };
 }
 
 // Loan details data
@@ -1777,24 +1782,28 @@ function getRiskScoreLabel(score: number) {
 function RuleCard({ 
   rule, 
   comment,
-  subruleComments,
   onSaveComment,
-  onSaveSubruleComment 
 }: { 
   rule: Rule;
   comment?: string;
-  subruleComments?: Record<string, string>;
   onSaveComment: (ruleName: string, comment: string) => void;
-  onSaveSubruleComment: (ruleName: string, subruleName: string, comment: string) => void;
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState(comment || "");
-  const [openSubruleComment, setOpenSubruleComment] = useState<string | null>(null);
-  const [subruleCommentText, setSubruleCommentText] = useState<Record<string, string>>(subruleComments || {});
+  const commentRef = useRef<HTMLDivElement>(null);
   const isPassing = rule.status === "pass";
   const isNA = rule.status === "n/a";
   
+  const handleToggleComment = () => {
+    const willOpen = !isCommentOpen;
+    setIsCommentOpen(willOpen);
+    if (willOpen) {
+      setTimeout(() => {
+        commentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 50);
+    }
+  };
+
   const handleSaveComment = () => {
     onSaveComment(rule.name, commentText);
     setIsCommentOpen(false);
@@ -1803,7 +1812,7 @@ function RuleCard({
   return (
     <div
       className={cn(
-        "rounded-xl border transition-colors relative",
+        "rounded-xl border transition-colors",
         isNA
           ? "border-muted bg-muted/30"
           : isPassing
@@ -1811,35 +1820,20 @@ function RuleCard({
             : "border-fail/20 bg-fail/[0.02]"
       )}
     >
-      {/* Clickable Header Row */}
-      <div className="flex w-full items-center justify-between gap-4 p-5">
-        <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex flex-1 items-center gap-3 text-left hover:opacity-80 transition-opacity"
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+      <div className="flex w-full items-center justify-between gap-4 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h4 className="text-base font-semibold text-foreground">{rule.name}</h4>
+          {rule.ruleId && (
+            <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              Rule ID: {rule.ruleId}
+            </span>
           )}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h4 className="text-lg font-semibold text-foreground">{rule.name}</h4>
-            {rule.ruleId && (
-              <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                Rule ID: {rule.ruleId}
-              </span>
-            )}
-          </div>
-        </button>
-        <div className="flex items-center gap-3">
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
           {/* Comment Icon */}
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsCommentOpen(!isCommentOpen);
-            }}
+            onClick={handleToggleComment}
             className={cn(
               "relative rounded-md p-1.5 transition-colors hover:bg-muted",
               comment ? "text-accent" : "text-muted-foreground hover:text-foreground"
@@ -1861,9 +1855,9 @@ function RuleCard({
         </div>
       </div>
       
-      {/* Comment Popup */}
+      {/* Comment Section - inline expansion */}
       {isCommentOpen && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-4 shadow-lg">
+        <div ref={commentRef} className="border-t border-border bg-muted/20 p-4">
           <div className="mb-3 flex items-center justify-between">
             <h5 className="text-sm font-semibold text-foreground">Comment for: {rule.name}</h5>
             <button
@@ -1896,115 +1890,6 @@ function RuleCard({
               Save Comment
             </Button>
           </div>
-        </div>
-      )}
-      
-      {/* Expanded Content */}
-      {isExpanded && (
-        <div className="border-t border-border px-5 pb-5 pt-4">
-          <p className="text-base leading-relaxed text-muted-foreground">{rule.description}</p>
-          
-          {/* Subrules Section */}
-          {rule.subrules && rule.subrules.length > 0 && (
-            <div className="mt-4">
-              <h5 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Subrules</h5>
-              <div className="space-y-2">
-                {rule.subrules.map((subrule, index) => (
-                  <div key={index} className="relative">
-                    <div
-                      className={cn(
-                        "flex items-center justify-between gap-4 rounded-lg border p-3",
-                        subrule.status === "n/a"
-                          ? "border-muted bg-muted/30"
-                          : subrule.status === "pass"
-                            ? "border-pass/20 bg-pass/5"
-                            : "border-fail/20 bg-fail/5"
-                      )}
-                    >
-                      <div className="flex items-start gap-3 flex-1">
-                        {subrule.status === "n/a" ? (
-                          <span className="mt-0.5 text-xs font-medium text-muted-foreground shrink-0">N/A</span>
-                        ) : subrule.status === "pass" ? (
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-pass" />
-                        ) : (
-                          <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-fail" />
-                        )}
-                        <div className="flex-1">
-                          <p className={cn(
-                            "text-sm font-medium",
-                            subrule.status === "n/a" ? "text-muted-foreground" : "text-foreground"
-                          )}>{subrule.name}</p>
-                          <p className="text-sm text-muted-foreground">{subrule.description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {/* Subrule Comment Button */}
-                        <button
-                          type="button"
-                          onClick={() => setOpenSubruleComment(openSubruleComment === subrule.name ? null : subrule.name)}
-                          className={cn(
-                            "rounded-md p-1 transition-colors hover:bg-muted",
-                            subruleCommentText[subrule.name] ? "text-accent" : "text-muted-foreground hover:text-foreground"
-                          )}
-                          title="Add comment"
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                        </button>
-                        {subrule.status === "n/a" ? (
-                          <span className="text-xs font-medium text-muted-foreground shrink-0">N/A</span>
-                        ) : subrule.status === "pass" ? (
-                          <CheckCircle2 className="h-5 w-5 shrink-0 text-pass" />
-                        ) : (
-                          <XCircle className="h-5 w-5 shrink-0 text-fail" />
-                        )}
-                      </div>
-                    </div>
-                    {/* Subrule Comment Popup */}
-                    {openSubruleComment === subrule.name && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-3 shadow-lg">
-                        <div className="mb-2 flex items-center justify-between">
-                          <h6 className="text-xs font-semibold text-foreground">Comment: {subrule.name}</h6>
-                          <button
-                            type="button"
-                            onClick={() => setOpenSubruleComment(null)}
-                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <Textarea
-                          value={subruleCommentText[subrule.name] || ""}
-                          onChange={(e) => setSubruleCommentText({...subruleCommentText, [subrule.name]: e.target.value})}
-                          placeholder="Enter comment..."
-                          className="mb-2 min-h-[60px] resize-none text-xs"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setOpenSubruleComment(null)}
-                            className="h-7 bg-transparent text-xs"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              onSaveSubruleComment(rule.name, subrule.name, subruleCommentText[subrule.name] || "");
-                              setOpenSubruleComment(null);
-                            }}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -2186,33 +2071,22 @@ function ComparisonPanel({
 
 function RuleCategorySection({
   category,
-  isExpanded,
   tabInsightOpen,
   tabComparisonOpen,
-  onToggleExpand,
   onToggleInsight,
   onToggleComparison,
   comments,
-  subruleComments,
   onSaveComment,
-  onSaveSubruleComment,
 }: {
   category: RuleCategory;
-  isExpanded: boolean;
   tabInsightOpen: boolean;
   tabComparisonOpen: boolean;
-  onToggleExpand: () => void;
   onToggleInsight: () => void;
   onToggleComparison: () => void;
   comments: Record<string, string>;
-  subruleComments: Record<string, Record<string, string>>;
   onSaveComment: (categoryName: string, ruleName: string, comment: string) => void;
-  onSaveSubruleComment: (categoryName: string, ruleName: string, subruleName: string, comment: string) => void;
 }) {
-  const passCount = category.rules.filter((r) => r.status === "pass").length;
   const failCount = category.rules.filter((r) => r.status === "fail").length;
-  const naCount = category.rules.filter((r) => r.status === "n/a").length;
-  const totalApplicable = passCount + failCount;
 
   // Sort rules by risk score (highest/worst first)
   const sortedRules = [...category.rules].sort((a, b) => b.riskScore - a.riskScore);
@@ -2222,27 +2096,8 @@ function RuleCategorySection({
 
   return (
     <div className="rounded-lg border border-border bg-card">
-      {/* Collapsible Header */}
-      <div
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        onClick={onToggleExpand}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onToggleExpand();
-          }
-        }}
-        className="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-4 text-left hover:bg-muted/50 transition-colors"
-      >
-        {/* Expand Icon */}
-        {isExpanded ? (
-          <ChevronDown className="h-5 w-5 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-        )}
-        
+      {/* Category Header */}
+      <div className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4">
         {/* Category Name */}
         <h3 className="text-xl font-bold text-foreground">{category.name}</h3>
         
@@ -2262,13 +2117,7 @@ function RuleCategorySection({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isExpanded) {
-                onToggleExpand();
-              }
-              onToggleInsight();
-            }}
+            onClick={() => onToggleInsight()}
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm",
               tabInsightOpen
@@ -2282,13 +2131,7 @@ function RuleCategorySection({
           </button>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isExpanded) {
-                onToggleExpand();
-              }
-              onToggleComparison();
-            }}
+            onClick={() => onToggleComparison()}
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm",
               tabComparisonOpen
@@ -2303,27 +2146,19 @@ function RuleCategorySection({
         </div>
       </div>
 
-      {/* Expanded Content */}
-      {isExpanded && (
-        <div className="border-t border-border px-5 py-4 space-y-4">
-          <div className="space-y-2">
-            {sortedRules.map((rule) => (
-              <RuleCard
-                key={rule.name}
-                rule={rule}
-                comment={comments[rule.name]}
-                subruleComments={subruleComments?.[rule.name]}
-                onSaveComment={(ruleName, comment) =>
-                  onSaveComment(category.name, ruleName, comment)
-                }
-                onSaveSubruleComment={(ruleName, subruleName, comment) =>
-                  onSaveSubruleComment(category.name, ruleName, subruleName, comment)
-                }
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Rules - always visible */}
+      <div className="border-t border-border px-5 py-3 space-y-2">
+        {sortedRules.map((rule) => (
+          <RuleCard
+            key={rule.name}
+            rule={rule}
+            comment={comments[rule.name]}
+            onSaveComment={(ruleName, comment) =>
+              onSaveComment(category.name, ruleName, comment)
+            }
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -2334,9 +2169,7 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
   const [openComparisons, setOpenComparisons] = useState<Record<string, boolean>>({});
   const [tabInsightOpen, setTabInsightOpen] = useState<Record<"income" | "valuation", boolean>>({ income: false, valuation: false });
   const [tabComparisonOpen, setTabComparisonOpen] = useState<Record<"income" | "valuation", boolean>>({ income: false, valuation: false });
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [comments, setComments] = useState<Record<string, Record<string, string>>>({});
-  const [subruleComments, setSubruleComments] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [incomePageComment, setIncomePageComment] = useState("");
   const [valuationPageComment, setValuationPageComment] = useState("");
   const [jsonRuleCategoriesBySection, setJsonRuleCategoriesBySection] = useState<Record<string, UiRuleCategory[]> | null>(null);
@@ -2471,7 +2304,7 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
     jsonLoanNumberCandidate === selectedLoan.loanNumber;
 
   const narrativeText =
-    hasJsonLoanSummary ? jsonRiskInsights?.summary_narrative?.trim() : null;
+    jsonRiskInsights?.summary_narrative?.trim() || null;
   const narrativeParagraphs =
     narrativeText && narrativeText.length > 0
       ? narrativeText.split(/\n\s*\n/).filter(Boolean)
@@ -2480,10 +2313,10 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
         : [summaryNarrative.overview, summaryNarrative.riskAssessment];
 
   const keyRiskAreas =
-    selectedLoan?.keyRiskAreas?.length
-      ? selectedLoan.keyRiskAreas
-      : hasJsonLoanSummary && jsonRiskInsights?.key_risk_areas && jsonRiskInsights.key_risk_areas.length > 0
-        ? jsonRiskInsights.key_risk_areas
+    jsonRiskInsights?.key_risk_areas && jsonRiskInsights.key_risk_areas.length > 0
+      ? jsonRiskInsights.key_risk_areas
+      : selectedLoan?.keyRiskAreas?.length
+        ? selectedLoan.keyRiskAreas
         : summaryNarrative.keyRiskAreas;
 
   const displayRiskScore = loanSummaryScores?.riskScore ?? baseLoanDetails.riskScore;
@@ -2566,12 +2399,6 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
     alert("Comments saved successfully!");
   };
 
-  const toggleExpanded = (categoryName: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [categoryName]: !prev[categoryName],
-    }));
-  };
   
   const handleSaveComment = (categoryName: string, ruleName: string, comment: string) => {
     setComments(prev => ({
@@ -2583,18 +2410,6 @@ export function LoanDetailPage({ loanId, onNavigateToRedFlagReview }: LoanDetail
     }));
   };
 
-  const handleSaveSubruleComment = (categoryName: string, ruleName: string, subruleName: string, comment: string) => {
-    setSubruleComments(prev => ({
-      ...prev,
-      [categoryName]: {
-        ...(prev[categoryName] || {}),
-        [ruleName]: {
-          ...(prev[categoryName]?.[ruleName] || {}),
-          [subruleName]: comment,
-        }
-      }
-    }));
-  };
   
   const exportCommentsToCSV = () => {
     const rows: string[][] = [["Category", "Rule Name", "Comment", "Timestamp"]];
@@ -2636,8 +2451,17 @@ const analysisData = {
         return (fromJson && fromJson.length > 0 ? (fromJson as unknown as RuleCategory[]) : incomeExpenseRules);
       })()
     },
-    // Valuation intentionally starts empty (no summary / rules entries yet).
-    valuation: { title: "Valuation Analysis", rules: [] as RuleCategory[] },
+    valuation: { 
+      title: "Valuation Analysis", 
+      rules: (() => {
+        if (!jsonRuleCategoriesBySection) return [] as RuleCategory[];
+        const valuationKey =
+          Object.keys(jsonRuleCategoriesBySection).find((k) => k.toLowerCase().includes("valuation")) ??
+          undefined;
+        const fromJson = valuationKey ? jsonRuleCategoriesBySection[valuationKey] : undefined;
+        return (fromJson && fromJson.length > 0 ? (fromJson as unknown as RuleCategory[]) : [] as RuleCategory[]);
+      })()
+    },
   };
   
   const currentAnalysis = analysisData[activeAnalysisTab] || { title: "", rules: [] };
@@ -2678,7 +2502,7 @@ const analysisData = {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-card-foreground">
-              {displayedLoanDetails.propertyName} - {displayedLoanDetails.financingType}
+              {displayedLoanDetails.propertyName}{displayedLoanDetails.financingType && displayedLoanDetails.financingType !== "—" ? ` - ${displayedLoanDetails.financingType}` : ""}
             </h2>
             {hasJsonLoanSummary && propertyAddressFromFacts ? (
               <div className="text-base leading-snug text-muted-foreground">
@@ -2738,37 +2562,25 @@ const analysisData = {
             <p className="text-base font-semibold text-foreground">{displayedLoanDetails.borrower}</p>
           </div>
           <div className="space-y-1.5">
+            <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Units</p>
+            <p className="text-base font-semibold text-foreground">{baseLoanDetails.units}</p>
+          </div>
+          <div className="space-y-1.5">
             <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Compliance Score</p>
             {(() => {
-              const fallbackPassed =
-                incomeExpenseRules.reduce(
-                  (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
-                  0
-                ) +
-                valuationRules.reduce(
-                  (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
-                  0
-                );
-              const fallbackTotal =
-                incomeExpenseRules.reduce(
-                  (acc, cat) =>
-                    acc + cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
-                  0
-                ) +
-                valuationRules.reduce(
-                  (acc, cat) =>
-                    acc + cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
-                  0
-                );
-
-              const passed =
-                loanSummaryScores?.compliance.passed ??
-                selectedLoan?.complianceScoreData.passed ??
-                fallbackPassed;
-              const total =
-                loanSummaryScores?.compliance.total ??
-                selectedLoan?.complianceScoreData.total ??
-                fallbackTotal;
+              // Sum compliance across all rule type sections (category-level, not subrule-level)
+              const allSections = Object.values(analysisData);
+              const passed = allSections.reduce(
+                (acc, section) =>
+                  acc + (section.rules || []).filter(
+                    (cat) => cat.rules.filter((r) => r.status === "fail").length === 0
+                  ).length,
+                0
+              );
+              const total = allSections.reduce(
+                (acc, section) => acc + (section.rules || []).length,
+                0
+              );
               const percentage = total > 0 ? (passed / total) * 100 : 0;
               const fillColor = percentage >= 70 ? "#22c55e" : percentage >= 50 ? "#eab308" : "#ef4444";
               const colorClass = percentage >= 70 ? "text-pass" : percentage >= 50 ? "text-medium" : "text-fail";
@@ -2776,7 +2588,6 @@ const analysisData = {
               
               return (
                 <div className="flex items-center gap-3">
-                  {/* Horizontal segmented bar - 5 segments for approximate progress */}
                   <div className="flex gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div
@@ -2795,9 +2606,19 @@ const analysisData = {
               );
             })()}
           </div>
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Units</p>
-            <p className="text-base font-semibold text-foreground">{baseLoanDetails.units}</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Risk Score:</span>
+              <svg width="36" height="22" viewBox="0 0 36 22" className="flex-shrink-0">
+                <path d="M 4 20 A 14 14 0 0 1 10 8" fill="none" stroke={displayedLoanDetails.riskScore === 1 ? "#22c55e" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                <path d="M 11 7 A 14 14 0 0 1 18 5" fill="none" stroke={displayedLoanDetails.riskScore <= 2 ? "#22c55e" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                <path d="M 19 5 A 14 14 0 0 1 26 7" fill="none" stroke={displayedLoanDetails.riskScore === 3 ? "#eab308" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                <path d="M 27 8 A 14 14 0 0 1 32 20" fill="none" stroke={displayedLoanDetails.riskScore === 4 ? "#ef4444" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                <line x1="18" y1="20" x2={displayedLoanDetails.riskScore === 1 ? 8 : displayedLoanDetails.riskScore === 2 ? 13 : displayedLoanDetails.riskScore === 3 ? 23 : 28} y2={displayedLoanDetails.riskScore === 1 ? 12 : displayedLoanDetails.riskScore === 2 ? 7 : displayedLoanDetails.riskScore === 3 ? 7 : 12} stroke={displayedLoanDetails.riskScore <= 2 ? "#22c55e" : displayedLoanDetails.riskScore === 3 ? "#eab308" : "#ef4444"} strokeWidth="2" strokeLinecap="round" />
+                <circle cx="18" cy="20" r="2.5" fill={displayedLoanDetails.riskScore <= 2 ? "#22c55e" : displayedLoanDetails.riskScore === 3 ? "#eab308" : "#ef4444"} />
+              </svg>
+              <span className={cn("text-lg font-bold", displayedLoanDetails.riskScore <= 2 ? "text-pass" : displayedLoanDetails.riskScore === 3 ? "text-medium" : "text-fail")}>
+                {displayedLoanDetails.riskScore}
+              </span>
           </div>
         </div>
       </div>
@@ -2908,30 +2729,16 @@ const analysisData = {
                               />
                             ))}
                           </div>
-                          <span className="text-lg font-bold text-muted-foreground">—</span>
+                          <span className="text-lg font-bold text-muted-foreground">0/0</span>
                         </div>
                       );
                     }
 
-                    const fallbackPassed = (currentAnalysis.rules || []).reduce(
-                      (acc, cat) => acc + cat.rules.filter((r) => r.status === "pass").length,
-                      0
-                    );
-                    const fallbackTotal = (currentAnalysis.rules || []).reduce(
-                      (acc, cat) =>
-                        acc +
-                        cat.rules.filter((r) => r.status === "pass" || r.status === "fail").length,
-                      0
-                    );
-
-                    const passed =
-                      loanSummaryScores?.compliance.passed ??
-                      selectedLoan?.complianceScoreData.passed ??
-                      fallbackPassed;
-                    const total =
-                      loanSummaryScores?.compliance.total ??
-                      selectedLoan?.complianceScoreData.total ??
-                      fallbackTotal;
+                    const categories = currentAnalysis.rules || [];
+                    const passed = categories.filter(
+                      (cat) => cat.rules.filter((r) => r.status === "fail").length === 0
+                    ).length;
+                    const total = categories.length;
 const percentage = total > 0 ? (passed / total) * 100 : 0;
 const fillColor = percentage >= 70 ? "#22c55e" : percentage >= 50 ? "#eab308" : "#ef4444";
 const colorClass = percentage >= 70 ? "text-pass" : percentage >= 50 ? "text-medium" : "text-fail";
@@ -2956,6 +2763,35 @@ const filledSegments = Math.round((percentage / 100) * 5);
   </span>
   </div>
   );
+                  })()}
+                </div>
+                {/* Risk Score */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Risk Score:</span>
+                  {(() => {
+                    const tabRiskScore = hasCurrentAnalysisRules ? displayedLoanDetails.riskScore : 0;
+                    return (
+                      <>
+                        <svg width="36" height="22" viewBox="0 0 36 22" className="flex-shrink-0">
+                          <path d="M 4 20 A 14 14 0 0 1 10 8" fill="none" stroke={tabRiskScore === 1 ? "#22c55e" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                          <path d="M 11 7 A 14 14 0 0 1 18 5" fill="none" stroke={tabRiskScore >= 1 && tabRiskScore <= 2 ? "#22c55e" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                          <path d="M 19 5 A 14 14 0 0 1 26 7" fill="none" stroke={tabRiskScore === 3 ? "#eab308" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                          <path d="M 27 8 A 14 14 0 0 1 32 20" fill="none" stroke={tabRiskScore === 4 ? "#ef4444" : "#e5e7eb"} strokeWidth="3" strokeLinecap="round" />
+                          {tabRiskScore > 0 && (
+                            <>
+                              <line x1="18" y1="20" x2={tabRiskScore === 1 ? 8 : tabRiskScore === 2 ? 13 : tabRiskScore === 3 ? 23 : 28} y2={tabRiskScore === 1 ? 12 : tabRiskScore === 2 ? 7 : tabRiskScore === 3 ? 7 : 12} stroke={tabRiskScore <= 2 ? "#22c55e" : tabRiskScore === 3 ? "#eab308" : "#ef4444"} strokeWidth="2" strokeLinecap="round" />
+                              <circle cx="18" cy="20" r="2.5" fill={tabRiskScore <= 2 ? "#22c55e" : tabRiskScore === 3 ? "#eab308" : "#ef4444"} />
+                            </>
+                          )}
+                          {tabRiskScore === 0 && (
+                            <circle cx="18" cy="20" r="2.5" fill="#9ca3af" />
+                          )}
+                        </svg>
+                        <span className={cn("text-lg font-bold", tabRiskScore === 0 ? "text-muted-foreground" : tabRiskScore <= 2 ? "text-pass" : tabRiskScore === 3 ? "text-medium" : "text-fail")}>
+                          {tabRiskScore}
+                        </span>
+                      </>
+                    );
                   })()}
                 </div>
               </div>
@@ -2984,16 +2820,12 @@ const filledSegments = Math.round((percentage / 100) * 5);
                   <RuleCategorySection
                     key={category.name}
                     category={category}
-                    isExpanded={expandedCategories[category.name] || false}
                     tabInsightOpen={tabInsightOpen[activeAnalysisTab] || false}
                     tabComparisonOpen={tabComparisonOpen[activeAnalysisTab] || false}
-                    onToggleExpand={() => toggleExpanded(category.name)}
                     onToggleInsight={() => toggleInsight(category.name)}
                     onToggleComparison={() => toggleComparison(category.name)}
                     comments={comments[category.name] || {}}
-                    subruleComments={subruleComments[category.name]}
                     onSaveComment={handleSaveComment}
-                    onSaveSubruleComment={handleSaveSubruleComment}
                   />
                 ))}
               </div>

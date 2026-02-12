@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { DollarSign } from "lucide-react";
-import { loansData } from "@/lib/loan-data";
+import { loansData, type Loan } from "@/lib/loan-data";
 
 const severityStyles = {
   Critical: "bg-critical/10 text-critical border-critical/20",
@@ -77,13 +77,14 @@ function RiskScorePieChart({ distribution }: { distribution: { score1: number; s
   );
 }
 
-export function SystemRecommendations() {
-  const totalLoans = loansData.length;
-  const failedIncomeExpenseLoans = loansData.filter(
+export function SystemRecommendations({ loans }: { loans?: Loan[] }) {
+  const effectiveLoans = loans ?? loansData;
+  const totalLoans = effectiveLoans.length;
+  const failedIncomeExpenseLoans = effectiveLoans.filter(
     (loan) => loan.rulesOutcome.incomeExpense.passed < loan.rulesOutcome.incomeExpense.total
   ).length;
 
-  const riskScoreDistribution = loansData.reduce(
+  const riskScoreDistribution = effectiveLoans.reduce(
     (acc, loan) => {
       if (loan.riskScore === 1) acc.score1 += 1;
       else if (loan.riskScore === 2) acc.score2 += 1;

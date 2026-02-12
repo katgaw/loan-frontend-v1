@@ -82,7 +82,7 @@ function pickLoanSummaryStatement(data: unknown): string | null {
   return typeof statement === "string" ? statement : null;
 }
 
-function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compliance: { passed: number; total: number } } | null {
+function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compliance?: { passed: number; total: number } } | null {
   if (!data || typeof data !== "object") return null;
   const loanSummary = (data as Record<string, unknown>)["loan_summary"];
   if (!loanSummary || typeof loanSummary !== "object") return null;
@@ -92,15 +92,20 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
   if (typeof risk !== "number" || !Number.isFinite(risk)) return null;
   if (risk !== 1 && risk !== 2 && risk !== 3 && risk !== 4) return null;
 
+  let compliance: { passed: number; total: number } | undefined;
   const rawCompliance = (loanSummary as Record<string, unknown>)["compliance_score"];
-  if (typeof rawCompliance !== "string") return null;
-  const parts = rawCompliance.split("/").map((p) => p.trim());
-  if (parts.length !== 2) return null;
-  const passed = Number.parseInt(parts[0] ?? "", 10);
-  const total = Number.parseInt(parts[1] ?? "", 10);
-  if (!Number.isFinite(passed) || !Number.isFinite(total) || total <= 0) return null;
+  if (typeof rawCompliance === "string") {
+    const parts = rawCompliance.split("/").map((p) => p.trim());
+    if (parts.length === 2) {
+      const passed = Number.parseInt(parts[0] ?? "", 10);
+      const total = Number.parseInt(parts[1] ?? "", 10);
+      if (Number.isFinite(passed) && Number.isFinite(total) && total > 0) {
+        compliance = { passed, total };
+      }
+    }
+  }
 
-  return { riskScore: risk, compliance: { passed, total } };
+  return { riskScore: risk, compliance };
 }
 
 @Component({
@@ -189,18 +194,18 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Borrower</p>
-                <p class="mt-1 text-base font-bold text-foreground">—</p>
+                <p class="mt-1 text-base font-bold text-foreground">{{ loan.borrower.trim() ? loan.borrower : '—' }}</p>
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compliance Score</p>
                 <div class="mt-1 flex items-center gap-2">
-                  <p class="text-base font-bold text-foreground">{{ loan.complianceScoreData.passed }}/{{ loan.complianceScoreData.total }}</p>
+                  <p class="text-base font-bold text-foreground">{{ getOverallCompliancePassed() }}/{{ getOverallComplianceTotal() }}</p>
                   <div class="flex gap-1">
                     @for (i of [1, 2, 3, 4, 5]; track i) {
                       <div
                         [class]="cn(
                           'h-4 w-4 rounded',
-                          i <= Math.round((loan.complianceScoreData.passed / loan.complianceScoreData.total) * 5)
+                          getOverallComplianceTotal() > 0 && i <= Math.round((getOverallCompliancePassed() / getOverallComplianceTotal()) * 5)
                             ? 'bg-yellow-500'
                             : 'border border-gray-300 bg-transparent'
                         )"
@@ -235,45 +240,51 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk Score</p>
-                <div class="mt-1 flex items-center gap-3">
-                  <!-- Semicircular Progress Bar -->
-                  <svg width="80" height="48" viewBox="0 0 80 80" class="overflow-visible flex-shrink-0">
-                    <defs>
-                      <clipPath [id]="'semicircle-mask-' + loan.id + '-' + loan.riskScore">
-                        <rect x="0" y="0" width="80" height="44"></rect>
-                      </clipPath>
-                    </defs>
-                    <!-- Background circle (unfilled) - clipped to show only top half -->
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="36"
+                <div class="mt-1 flex items-center gap-2">
+                  <svg width="36" height="22" viewBox="0 0 36 22" class="flex-shrink-0">
+                    <path
+                      d="M 4 20 A 14 14 0 0 1 10 8"
                       fill="none"
-                      stroke="#e5e7eb"
-                      stroke-width="8"
+                      [attr.stroke]="loan.riskScore === 1 ? '#22c55e' : '#e5e7eb'"
+                      stroke-width="3"
                       stroke-linecap="round"
-                      [attr.clip-path]="'url(#semicircle-mask-' + loan.id + '-' + loan.riskScore + ')'"
-                    ></circle>
-                    <!-- Filled circle - clipped to show only top half, rotated to start from left -->
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="36"
+                    />
+                    <path
+                      d="M 11 7 A 14 14 0 0 1 18 5"
                       fill="none"
+                      [attr.stroke]="loan.riskScore <= 2 ? '#22c55e' : '#e5e7eb'"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M 19 5 A 14 14 0 0 1 26 7"
+                      fill="none"
+                      [attr.stroke]="loan.riskScore === 3 ? '#eab308' : '#e5e7eb'"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M 27 8 A 14 14 0 0 1 32 20"
+                      fill="none"
+                      [attr.stroke]="loan.riskScore === 4 ? '#ef4444' : '#e5e7eb'"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                    />
+                    <line
+                      x1="18"
+                      y1="20"
+                      [attr.x2]="getSmallGaugeNeedleX(loan.riskScore)"
+                      [attr.y2]="getSmallGaugeNeedleY(loan.riskScore)"
                       [attr.stroke]="getRiskScoreColor(loan.riskScore)"
-                      stroke-width="8"
+                      stroke-width="2"
                       stroke-linecap="round"
-                      [attr.stroke-dasharray]="getSemicircleLength()"
-                      [attr.stroke-dashoffset]="getRiskScoreOffset(loan.riskScore)"
-                      [attr.clip-path]="'url(#semicircle-mask-' + loan.id + '-' + loan.riskScore + ')'"
-                      class="transition-all duration-300"
-                      transform="rotate(-90 40 40)"
-                    ></circle>
+                    />
+                    <circle cx="18" cy="20" r="2.5" [attr.fill]="getRiskScoreColor(loan.riskScore)" />
                   </svg>
-                  <span
-                    class="text-lg font-bold"
-                    [style.color]="getRiskScoreColor(loan.riskScore)"
-                  >
+                  <span [class]="cn(
+                    'text-lg font-bold',
+                    loan.riskScore <= 2 ? 'text-pass' : loan.riskScore === 3 ? 'text-medium' : 'text-fail'
+                  )">
                     {{ loan.riskScore }}
                   </span>
                 </div>
@@ -373,8 +384,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                   <div class="flex flex-wrap items-center justify-between gap-4">
                     <h3 class="text-xl font-semibold text-foreground">{{ getCurrentTabTitle() }}</h3>
                     <div class="flex flex-wrap items-center gap-6">
-                      @if (activeTab() === 'income') {
-                        <!-- Risk Score -->
+                      <!-- Risk Score -->
                         <div class="flex items-center gap-2">
                           <span class="text-sm text-muted-foreground">Risk Score:</span>
                           <div class="flex items-center gap-2">
@@ -382,51 +392,55 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                               <path
                                 d="M 4 20 A 14 14 0 0 1 10 8"
                                 fill="none"
-                                [attr.stroke]="loan.riskScore === 1 ? '#22c55e' : '#e5e7eb'"
+                                [attr.stroke]="getTabRiskScore() === 1 ? '#22c55e' : '#e5e7eb'"
                                 stroke-width="3"
                                 stroke-linecap="round"
                               />
                               <path
                                 d="M 11 7 A 14 14 0 0 1 18 5"
                                 fill="none"
-                                [attr.stroke]="loan.riskScore <= 2 ? '#22c55e' : '#e5e7eb'"
+                                [attr.stroke]="getTabRiskScore() >= 1 && getTabRiskScore() <= 2 ? '#22c55e' : '#e5e7eb'"
                                 stroke-width="3"
                                 stroke-linecap="round"
                               />
                               <path
                                 d="M 19 5 A 14 14 0 0 1 26 7"
                                 fill="none"
-                                [attr.stroke]="loan.riskScore === 3 ? '#eab308' : '#e5e7eb'"
+                                [attr.stroke]="getTabRiskScore() === 3 ? '#eab308' : '#e5e7eb'"
                                 stroke-width="3"
                                 stroke-linecap="round"
                               />
                               <path
                                 d="M 27 8 A 14 14 0 0 1 32 20"
                                 fill="none"
-                                [attr.stroke]="loan.riskScore === 4 ? '#ef4444' : '#e5e7eb'"
+                                [attr.stroke]="getTabRiskScore() === 4 ? '#ef4444' : '#e5e7eb'"
                                 stroke-width="3"
                                 stroke-linecap="round"
                               />
-                              <line
-                                x1="18"
-                                y1="20"
-                                [attr.x2]="getSmallGaugeNeedleX(loan.riskScore)"
-                                [attr.y2]="getSmallGaugeNeedleY(loan.riskScore)"
-                                [attr.stroke]="getRiskScoreColor(loan.riskScore)"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                              />
-                              <circle cx="18" cy="20" r="2.5" [attr.fill]="getRiskScoreColor(loan.riskScore)" />
+                              @if (getTabRiskScore() > 0) {
+                                <line
+                                  x1="18"
+                                  y1="20"
+                                  [attr.x2]="getSmallGaugeNeedleX(getTabRiskScore())"
+                                  [attr.y2]="getSmallGaugeNeedleY(getTabRiskScore())"
+                                  [attr.stroke]="getRiskScoreColor(getTabRiskScore())"
+                                  stroke-width="2"
+                                  stroke-linecap="round"
+                                />
+                                <circle cx="18" cy="20" r="2.5" [attr.fill]="getRiskScoreColor(getTabRiskScore())" />
+                              }
+                              @if (getTabRiskScore() === 0) {
+                                <circle cx="18" cy="20" r="2.5" fill="#9ca3af" />
+                              }
                             </svg>
                             <span [class]="cn(
                               'text-lg font-bold',
-                              loan.riskScore <= 2 ? 'text-pass' : loan.riskScore === 3 ? 'text-medium' : 'text-fail'
+                              getTabRiskScore() === 0 ? 'text-muted-foreground' : getTabRiskScore() <= 2 ? 'text-pass' : getTabRiskScore() === 3 ? 'text-medium' : 'text-fail'
                             )">
-                              {{ loan.riskScore }}
+                              {{ getTabRiskScore() }}
                             </span>
                           </div>
                         </div>
-                      }
                       <!-- Compliance Score -->
                       <div class="flex items-center gap-2">
                         <span class="text-sm text-muted-foreground">Compliance Score:</span>
@@ -470,18 +484,8 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                         <div class="rounded-lg border border-border bg-card overflow-hidden">
                           <!-- Category Header -->
                           <div
-                            class="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-4 text-left hover:bg-muted/50 transition-colors cursor-pointer"
-                            (click)="toggleCategory(category.name)"
+                            class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4"
                           >
-                            @if (expandedCategories()[category.name]) {
-                              <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                              </svg>
-                            } @else {
-                              <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                              </svg>
-                            }
                             <h3 class="text-xl font-bold text-foreground">{{ category.name }}</h3>
                             <span [class]="cn(
                               'rounded-md px-3 py-1.5 text-sm font-semibold w-16 text-center',
@@ -501,7 +505,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                     ? '!bg-transparent hover:!bg-accent/10'
                                     : '!bg-gradient-to-r !from-accent/90 !to-accent hover:!bg-white'
                                 )"
-                                (click)="$event.stopPropagation(); toggleInsight(category.name)"
+                                (click)="toggleInsight(category.name)"
                                 title="View Risk Insight"
                               >
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -518,7 +522,7 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                     ? '!bg-transparent hover:!bg-accent/10'
                                     : '!bg-gradient-to-r !from-accent/90 !to-accent hover:!bg-white'
                                 )"
-                                (click)="$event.stopPropagation(); toggleComparison(category.name)"
+                                (click)="toggleComparison(category.name)"
                                 title="View Comparison"
                               >
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -529,9 +533,8 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                             </div>
                           </div>
 
-                          <!-- Expanded Content -->
-                          @if (expandedCategories()[category.name]) {
-                            <div class="border-t border-border px-5 py-4 space-y-4">
+                          <!-- Rules - always visible -->
+                          <div class="border-t border-border px-5 py-3 space-y-2">
                               @for (rule of category.rules; track rule.name) {
                                 <div [class]="cn(
                                   'rounded-xl border transition-colors relative',
@@ -541,32 +544,17 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                       ? 'border-border bg-card'
                                       : 'border-fail/20 bg-fail/[0.02]'
                                 )">
-                                  <!-- Clickable Header Row -->
-                                  <div class="flex w-full items-center justify-between gap-4 p-5">
-                                    <button
-                                      type="button"
-                                      (click)="toggleRuleExpansion(category.name, rule.name); $event.stopPropagation()"
-                                      class="flex flex-1 items-center gap-3 text-left hover:opacity-80 transition-opacity"
-                                    >
-                                      @if (getExpandedRule(category.name, rule.name)) {
-                                        <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                      } @else {
-                                        <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                        </svg>
+                                  <!-- Static Header Row -->
+                                  <div class="flex w-full items-center justify-between gap-4 px-5 py-4">
+                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                      <h4 class="text-base font-semibold text-foreground">{{ rule.name }}</h4>
+                                      @if (rule.ruleId) {
+                                        <span class="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                          Rule ID: {{ rule.ruleId }}
+                                        </span>
                                       }
-                                      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                        <h4 class="text-lg font-semibold text-foreground">{{ rule.name }}</h4>
-                                        @if (rule.ruleId) {
-                                          <span class="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                            Rule ID: {{ rule.ruleId }}
-                                          </span>
-                                        }
-                                      </div>
-                                    </button>
-                                    <div class="flex items-center gap-3">
+                                    </div>
+                                    <div class="flex items-center gap-3 shrink-0">
                                       <!-- Comment Icon -->
                                       <button
                                         type="button"
@@ -638,127 +626,9 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                     </div>
                                   }
 
-                                  <!-- Expanded Content -->
-                                  @if (getExpandedRule(category.name, rule.name)) {
-                                    <div class="border-t border-border px-5 pb-5 pt-4">
-                                      <p class="text-base leading-relaxed text-muted-foreground">{{ rule.description }}</p>
-
-                                      <!-- Subrules Section -->
-                                      @if (rule.subrules && rule.subrules.length > 0) {
-                                        <div class="mt-4">
-                                          <h5 class="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Subrules</h5>
-                                          <div class="space-y-2">
-                                            @for (subrule of rule.subrules; track subrule.name) {
-                                              <div class="relative">
-                                                <div
-                                                  [class]="cn(
-                                                    'flex items-center justify-between gap-4 rounded-lg border p-3',
-                                                    subrule.status === 'n/a'
-                                                      ? 'border-muted bg-muted/30'
-                                                      : subrule.status === 'pass'
-                                                        ? 'border-pass/20 bg-pass/5'
-                                                        : 'border-fail/20 bg-fail/5'
-                                                  )"
-                                                >
-                                                  <div class="flex items-start gap-3 flex-1">
-                                                    @if (subrule.status === 'n/a') {
-                                                      <span class="mt-0.5 text-xs font-medium text-muted-foreground shrink-0">N/A</span>
-                                                    } @else if (subrule.status === 'pass') {
-                                                      <svg class="mt-0.5 h-4 w-4 shrink-0 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                      </svg>
-                                                    } @else {
-                                                      <svg class="mt-0.5 h-4 w-4 shrink-0 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                      </svg>
-                                                    }
-                                                    <div class="flex-1">
-                                                      <p [class]="cn(
-                                                        'text-sm font-medium',
-                                                        subrule.status === 'n/a' ? 'text-muted-foreground' : 'text-foreground'
-                                                      )">{{ subrule.name }}</p>
-                                                      <p class="text-sm text-muted-foreground">{{ subrule.description }}</p>
-                                                    </div>
-                                                  </div>
-                                                  <div class="flex items-center gap-2">
-                                                    <!-- Subrule Comment Button -->
-                                                    <button
-                                                      type="button"
-                                                      (click)="toggleSubruleComment(category.name, rule.name, subrule.name); $event.stopPropagation()"
-                                                      [class]="cn(
-                                                        'relative rounded-md p-1 transition-colors hover:bg-muted',
-                                                        getSubruleComment(category.name, rule.name, subrule.name) ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
-                                                      )"
-                                                      title="Add comment"
-                                                    >
-                                                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                                                      </svg>
-                                                    </button>
-                                                    @if (subrule.status === 'n/a') {
-                                                      <span class="text-xs font-medium text-muted-foreground shrink-0">N/A</span>
-                                                    } @else if (subrule.status === 'pass') {
-                                                      <svg class="h-5 w-5 shrink-0 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                      </svg>
-                                                    } @else {
-                                                      <svg class="h-5 w-5 shrink-0 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                      </svg>
-                                                    }
-                                                  </div>
-                                                </div>
-                                                <!-- Subrule Comment Popup -->
-                                                @if (getOpenSubruleComment(category.name, rule.name, subrule.name)) {
-                                                  <div class="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-border bg-card p-3 shadow-lg">
-                                                    <div class="mb-2 flex items-center justify-between">
-                                                      <h6 class="text-xs font-semibold text-foreground">Comment: {{ subrule.name }}</h6>
-                                                      <button
-                                                        type="button"
-                                                        (click)="toggleSubruleComment(category.name, rule.name, subrule.name); $event.stopPropagation()"
-                                                        class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                      >
-                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                        </svg>
-                                                      </button>
-                                                    </div>
-                                                    <app-textarea
-                                                      [value]="getSubruleCommentText(category.name, rule.name, subrule.name)"
-                                                      (valueChange)="onSubruleCommentTextChange(category.name, rule.name, subrule.name, $event)"
-                                                      placeholder="Enter comment..."
-                                                      className="mb-2 min-h-[60px] resize-none text-xs"
-                                                    ></app-textarea>
-                                                    <div class="flex justify-end gap-2">
-                                                      <app-button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        (click)="toggleSubruleComment(category.name, rule.name, subrule.name); $event.stopPropagation()"
-                                                        className="h-7 bg-transparent text-xs"
-                                                      >
-                                                        Cancel
-                                                      </app-button>
-                                                      <app-button
-                                                        size="sm"
-                                                        className="h-7 text-xs"
-                                                        (click)="handleSaveSubruleComment(category.name, rule.name, subrule.name, getSubruleCommentText(category.name, rule.name, subrule.name)); $event.stopPropagation()"
-                                                      >
-                                                        Save
-                                                      </app-button>
-                                                    </div>
-                                                  </div>
-                                                }
-                                              </div>
-                                            }
-                                          </div>
-                                        </div>
-                                      }
-                                    </div>
-                                  }
                                 </div>
                               }
-                            </div>
-                          }
+                          </div>
                         </div>
                       
                       <!-- Insight Panel for this specific category -->
@@ -862,6 +732,14 @@ function pickLoanSummaryScores(data: unknown): { riskScore: 1 | 2 | 3 | 4; compl
                                   } @else if (item.answer.trim().toLowerCase() === 'no') {
                                     <svg class="h-4 w-4 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     <span class="inline-flex items-center rounded-md border border-fail/30 bg-fail/10 px-2.5 py-1 text-sm font-semibold text-fail">{{ item.answer }}</span>
+                                  } @else if (isMultiLineAnswer(item.answer)) {
+                                    <div class="flex flex-col gap-1">
+                                      @for (line of splitAnswerLines(item.answer); track $index) {
+                                        <span class="inline-flex items-center gap-1.5 text-sm text-foreground">
+                                          {{ line }}
+                                        </span>
+                                      }
+                                    </div>
                                   } @else {
                                     <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><circle cx="12" cy="12" r="3" stroke-width="2"></circle></svg>
                                     <span class="inline-flex items-center rounded-md border border-border bg-muted/40 px-2.5 py-1 text-sm font-semibold text-muted-foreground">{{ item.answer }}</span>
@@ -974,7 +852,7 @@ export class LoanDetailComponent implements OnInit {
   } | null>(null);
   propertyAddressFromFacts = signal<ParsedPropertyAddress | null>(null);
   jsonLoanSummary = signal<Record<string, unknown> | null>(null);
-  loanSummaryScores = signal<{ riskScore: 1 | 2 | 3 | 4; compliance: { passed: number; total: number } } | null>(null);
+  loanSummaryScores = signal<{ riskScore: 1 | 2 | 3 | 4; compliance?: { passed: number; total: number } } | null>(null);
   incomePageComment = signal<string>('');
   valuationPageComment = signal<string>('');
   comments = signal<Record<string, Record<string, string>>>({});
@@ -1217,6 +1095,16 @@ export class LoanDetailComponent implements OnInit {
     return this.openCategoryComparison() === categoryName;
   }
 
+  /** Split an answer string by literal "\n" (backslash-n) into separate lines for rendering. */
+  splitAnswerLines(answer: string): string[] {
+    return answer.split(/\\n/).map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  /** Check if an answer contains multiple lines (bullet points with \\n). */
+  isMultiLineAnswer(answer: string): boolean {
+    return answer.includes('\\n');
+  }
+
   hasAnyPanelOpen(): boolean {
     return this.openCategoryInsight() !== null || this.openCategoryComparison() !== null;
   }
@@ -1296,16 +1184,44 @@ export class LoanDetailComponent implements OnInit {
     return failCount === 0 ? 'PASS' : 'FAIL';
   }
 
-  getCompliancePassed(): number {
+  getTabRiskScore(): number {
+    const rules = this.getCurrentRules();
+    if (rules.length === 0) return 0;
     const loan = this.displayedLoan();
-    if (!loan) return 0;
-    return loan.complianceScoreData.passed;
+    return loan?.riskScore ?? 0;
+  }
+
+  getCompliancePassed(): number {
+    const categories = this.getCurrentRules();
+    return categories.filter(cat => this.getCategoryStatus(cat) === 'PASS').length;
   }
 
   getComplianceTotal(): number {
-    const loan = this.displayedLoan();
-    if (!loan) return 0;
-    return loan.complianceScoreData.total;
+    return this.getCurrentRules().length;
+  }
+
+  /** Sum of category-level PASS counts across ALL sections (Income & Expense + Valuation + ...) */
+  getOverallCompliancePassed(): number {
+    const jsonRules = this.jsonRuleCategoriesBySection();
+    if (!jsonRules) return 0;
+    let passed = 0;
+    for (const sectionCategories of Object.values(jsonRules)) {
+      for (const cat of sectionCategories as unknown as RuleCategory[]) {
+        if (this.getCategoryStatus(cat) === 'PASS') passed++;
+      }
+    }
+    return passed;
+  }
+
+  /** Total number of rule categories across ALL sections */
+  getOverallComplianceTotal(): number {
+    const jsonRules = this.jsonRuleCategoriesBySection();
+    if (!jsonRules) return 0;
+    let total = 0;
+    for (const sectionCategories of Object.values(jsonRules)) {
+      total += (sectionCategories as unknown as RuleCategory[]).length;
+    }
+    return total;
   }
 
   getComplianceFilledSegments(): number {
@@ -1316,18 +1232,16 @@ export class LoanDetailComponent implements OnInit {
   }
 
   getComplianceColor(): string {
-    const percentage = this.getComplianceTotal() > 0 
-      ? (this.getCompliancePassed() / this.getComplianceTotal()) * 100 
-      : 0;
+    if (this.getComplianceTotal() === 0) return '#e5e7eb';
+    const percentage = (this.getCompliancePassed() / this.getComplianceTotal()) * 100;
     if (percentage >= 70) return '#22c55e';
     if (percentage >= 50) return '#eab308';
     return '#ef4444';
   }
 
   getComplianceColorClass(): string {
-    const percentage = this.getComplianceTotal() > 0 
-      ? (this.getCompliancePassed() / this.getComplianceTotal()) * 100 
-      : 0;
+    if (this.getComplianceTotal() === 0) return 'text-muted-foreground';
+    const percentage = (this.getCompliancePassed() / this.getComplianceTotal()) * 100;
     if (percentage >= 70) return 'text-pass';
     if (percentage >= 50) return 'text-medium';
     return 'text-fail';
@@ -1371,41 +1285,13 @@ export class LoanDetailComponent implements OnInit {
     if (!this.loan) return null;
 
     const jsonLoanSummary = this.jsonLoanSummary();
-    if (!jsonLoanSummary) {
-      // No JSON data available, use base loan data
-      return this.loan;
-    }
+    const hasJson = jsonLoanSummary !== null;
 
-    // Try to match by loan_id first (internal ID), then by loan_number
-    const jsonLoanId = this.pickLoanSummaryField('loan_id', 'loanId');
-    const jsonLoanNumber = this.pickLoanSummaryField('loan_number', 'loanNumber');
-    
-    // Match by ID if available, otherwise match by loan number
-    const matchesById = jsonLoanId !== undefined && 
-                   String(jsonLoanId) === this.loan.id;
-    const matchesByNumber = jsonLoanNumber !== undefined && 
-                           typeof jsonLoanNumber === 'string' &&
-                           jsonLoanNumber.trim() !== '' &&
-                           jsonLoanNumber === this.loan.loanNumber;
-    
-    const hasJsonLoanSummary = matchesById || matchesByNumber;
-    
     // Calculate display values first (before using them)
     const displayRiskScore = this.loanSummaryScores()?.riskScore ?? this.loan.riskScore;
     const displayCompliance = this.loanSummaryScores()?.compliance ?? this.loan.complianceScoreData;
-    
-    console.log('Loan matching check:', {
-      loanId: this.loan.id,
-      loanNumber: this.loan.loanNumber,
-      jsonLoanId,
-      jsonLoanNumber,
-      matchesById,
-      matchesByNumber,
-      hasJsonLoanSummary,
-      jsonLoanSummary: jsonLoanSummary
-    });
-    
-    if (hasJsonLoanSummary) {
+
+    if (hasJson) {
       console.log('Using JSON data for loan details. Fields from JSON:', {
         propertyType: this.pickLoanSummaryField('property_type', 'propertyType'),
         loanAmount: this.pickLoanSummaryField('loan_amount', 'loanAmount'),
@@ -1414,38 +1300,54 @@ export class LoanDetailComponent implements OnInit {
         riskScore: displayRiskScore,
         complianceScore: displayCompliance
       });
-    } else {
-      console.log('Using base loan data (no JSON match found)');
     }
+
+    // Always prefer JSON data when available, fall back to base loan data
+    const jsonLoanNumber = this.pickLoanSummaryField('loan_number', 'loanNumber', 'loan_id', 'loanId');
 
     return {
       ...this.loan,
-      // Always use JSON data if available and matches, otherwise use base loan data
-      loanNumber: hasJsonLoanSummary && jsonLoanNumber !== undefined
-        ? this.textOrDash(jsonLoanNumber)
+      // All fields sourced from test_new.json loan_summary when available, else keep '—'
+      loanNumber: hasJson
+        ? this.textOrDash(this.pickLoanSummaryField('loan_number', 'loanNumber', 'loan_id', 'loanId'))
         : this.loan.loanNumber,
-      loanAmount: hasJsonLoanSummary
+      address: hasJson
+        ? this.textOrDash(this.pickLoanSummaryField('property_name', 'propertyName', 'address'))
+        : this.loan.address,
+      city: hasJson
+        ? this.textOrDash(this.pickLoanSummaryField('city'))
+        : this.loan.city,
+      state: hasJson
+        ? this.textOrDash(this.pickLoanSummaryField('state'))
+        : this.loan.state,
+      financing: hasJson
+        ? this.textOrDash(this.pickLoanSummaryField('financing', 'financing_type'))
+        : this.loan.financing,
+      loanAmount: hasJson
         ? (this.toNumber(this.pickLoanSummaryField('loan_amount', 'loanAmount')) ?? this.loan.loanAmount)
         : this.loan.loanAmount,
-      propertyType: hasJsonLoanSummary
+      propertyType: hasJson
         ? this.textOrDash(this.pickLoanSummaryField('property_type', 'propertyType'))
         : this.loan.propertyType,
-      acquisitionDate: hasJsonLoanSummary
+      acquisitionDate: hasJson
         ? this.textOrDash(this.pickLoanSummaryField('acquisition_date', 'acquisitionDate'))
         : this.loan.acquisitionDate,
-      lenderName: hasJsonLoanSummary
+      lenderName: hasJson
         ? this.textOrDash(this.pickLoanSummaryField('lender', 'lender_name', 'lenderName'))
         : this.loan.lenderName,
-      upb: hasJsonLoanSummary
+      upb: hasJson
         ? (this.toNumber(this.pickLoanSummaryField('upb', 'current_upb', 'currentUPB')) ?? this.loan.upb)
         : this.loan.upb,
-      loanType: hasJsonLoanSummary
+      loanType: hasJson
         ? this.textOrDash(this.pickLoanSummaryField('product_type', 'productType'))
         : this.loan.loanType,
-      commitmentDate: hasJsonLoanSummary
+      commitmentDate: hasJson
         ? this.textOrDash(this.pickLoanSummaryField('commitment_date', 'commitmentDate'))
         : this.loan.commitmentDate,
-      units: hasJsonLoanSummary
+      borrower: hasJson
+        ? this.textOrDash(this.pickLoanSummaryField('borrower'))
+        : '—',
+      units: hasJson
         ? (this.toNumber(this.pickLoanSummaryField('units')) ?? this.loan.units)
         : this.loan.units,
       riskScore: displayRiskScore,
@@ -1471,16 +1373,13 @@ export class LoanDetailComponent implements OnInit {
   }
 
   private getDisplayedNarrative(): string {
-    // Match React logic: if hasJsonLoanSummary, use JSON risk insights, otherwise use loan's aiExplanation
-    const hasJsonLoanSummary = this.hasJsonLoanSummary();
-    if (hasJsonLoanSummary) {
-      const narrativeText = this.jsonRiskInsights()?.summary_narrative?.trim();
-      if (narrativeText && narrativeText.length > 0) {
-        console.log('Using narrative from test_new.json risk_insights:', narrativeText);
-        return narrativeText;
-      }
+    // Priority 1: JSON risk insights from test_new.json
+    const narrativeText = this.jsonRiskInsights()?.summary_narrative?.trim();
+    if (narrativeText && narrativeText.length > 0) {
+      console.log('Using narrative from test_new.json risk_insights:', narrativeText);
+      return narrativeText;
     }
-    // Fallback to loan's aiExplanation (matching React behavior)
+    // Priority 2: loan's aiExplanation
     const loanExplanation = this.loan?.aiExplanation?.trim();
     if (loanExplanation && loanExplanation.length > 0) {
       console.log('Using narrative from loan data:', loanExplanation);
@@ -1491,21 +1390,16 @@ export class LoanDetailComponent implements OnInit {
   }
 
   private getDisplayedKeyRiskAreas(): string[] {
-    // Match React logic exactly:
-    // 1. If loan has keyRiskAreas, use those
-    // 2. Otherwise, if hasJsonLoanSummary and JSON has key_risk_areas, use JSON
-    // 3. Otherwise, return empty array
+    // Priority 1: JSON key_risk_areas from test_new.json
+    const jsonRiskAreas = this.jsonRiskInsights()?.key_risk_areas;
+    if (jsonRiskAreas && Array.isArray(jsonRiskAreas) && jsonRiskAreas.length > 0) {
+      console.log('Using key risk areas from test_new.json risk_insights:', jsonRiskAreas);
+      return jsonRiskAreas;
+    }
+    // Priority 2: loan's hardcoded keyRiskAreas
     if (this.loan?.keyRiskAreas?.length) {
       console.log('Using key risk areas from loan data:', this.loan.keyRiskAreas);
       return this.loan.keyRiskAreas;
-    }
-    const hasJsonLoanSummary = this.hasJsonLoanSummary();
-    if (hasJsonLoanSummary) {
-      const jsonRiskAreas = this.jsonRiskInsights()?.key_risk_areas;
-      if (jsonRiskAreas && Array.isArray(jsonRiskAreas) && jsonRiskAreas.length > 0) {
-        console.log('Using key risk areas from test_new.json risk_insights:', jsonRiskAreas);
-        return jsonRiskAreas;
-      }
     }
     console.log('No key risk areas available');
     return [];

@@ -1,7 +1,7 @@
 "use client";
 
 import { DollarSign, AlertTriangle, BarChart3 } from "lucide-react";
-import { loansData } from "@/lib/loan-data";
+import { loansData, type Loan } from "@/lib/loan-data";
 
 function formatCurrency(value: number): string {
   if (value >= 1000000000) {
@@ -13,22 +13,23 @@ function formatCurrency(value: number): string {
   return `$${(value / 1000).toFixed(0)}K`;
 }
 
-export function PortfolioSummary() {
-  const totalUpb = loansData.reduce((acc, loan) => acc + loan.upb, 0);
+interface PortfolioSummaryProps {
+  loans?: Loan[];
+}
+
+export function PortfolioSummary({ loans }: PortfolioSummaryProps) {
+  const data = loans ?? loansData;
+  const totalUpb = data.reduce((acc, loan) => acc + loan.upb, 0);
 
   // Calculate percentage of rules compliant from compliance scores
-  const totalPassed = loansData.reduce((acc, loan) => acc + loan.complianceScoreData.passed, 0);
-  const totalRules = loansData.reduce((acc, loan) => acc + loan.complianceScoreData.total, 0);
+  const totalPassed = data.reduce((acc, loan) => acc + loan.complianceScoreData.passed, 0);
+  const totalRules = data.reduce((acc, loan) => acc + loan.complianceScoreData.total, 0);
   const percentageCompliant = totalRules > 0 ? Math.round((totalPassed / totalRules) * 100) : 0;
 
-  // Calculate percentage of rules failed
-  const totalFailed = loansData.reduce(
-    (acc, loan) => acc + Math.max(0, loan.complianceScoreData.total - loan.complianceScoreData.passed),
-    0
-  );
-  const percentageFailed = totalRules > 0 ? Math.round((totalFailed / totalRules) * 100) : 0;
+  // Percentage failed is simply the complement of percentage compliant
+  const percentageFailed = 100 - percentageCompliant;
 
-  const criticalLoans = loansData.filter((loan) => loan.riskScore >= 3).length;
+  const criticalLoans = data.filter((loan) => loan.riskScore >= 3).length;
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">

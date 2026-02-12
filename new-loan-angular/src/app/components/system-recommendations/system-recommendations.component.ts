@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { loansData } from '../../../lib/loan-data';
+import { loansData, Loan } from '../../../lib/loan-data';
 import { cn } from '../../../lib/utils';
 
 const severityStyles = {
@@ -131,7 +131,7 @@ export class RiskScorePieChartComponent {
   styles: []
 })
 export class SystemRecommendationsComponent {
-  loans = loansData;
+  @Input() loans: Loan[] = loansData;
   cn = cn;
   severityStyles = severityStyles;
 

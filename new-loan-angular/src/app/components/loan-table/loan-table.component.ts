@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal, computed, ContentChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, ContentChild, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Loan, keyRiskAreaTitle } from '../../../lib/loan-data';
 import { cn } from '../../../lib/utils';
@@ -8,10 +8,16 @@ type SortField = 'loanNumber' | 'acquisitionDate' | 'lenderName' | 'propertyType
 type SortDirection = 'asc' | 'desc';
 
 function formatCurrency(value: number): string {
+  if (value >= 1000000000) {
+    return `$${(value / 1000000000).toFixed(2)}B`;
+  }
   if (value >= 1000000) {
     return `$${(value / 1000000).toFixed(1)}M`;
   }
-  return `$${(value / 1000).toFixed(0)}K`;
+  if (value >= 1000) {
+    return `$${(value / 1000).toFixed(0)}K`;
+  }
+  return `$${value.toLocaleString()}`;
 }
 
 function formatDate(dateString: string): string {
@@ -142,15 +148,21 @@ const severityStyles = {
                       </div>
                     </div>
                     <div class="flex flex-wrap gap-1.5">
-                      <span class="rounded bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-                        {{ loan.propertyType }}
-                      </span>
-                      <span class="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {{ loan.units > 1 ? loan.units + ' Units' : 'Single Asset' }}
-                      </span>
-                      <span class="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {{ loan.loanType }}
-                      </span>
+                      @if (loan.propertyType) {
+                        <span class="rounded bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                          {{ loan.propertyType }}
+                        </span>
+                      }
+                      @if (loan.units > 0) {
+                        <span class="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {{ loan.units > 1 ? loan.units + ' Units' : 'Single Asset' }}
+                        </span>
+                      }
+                      @if (loan.loanType) {
+                        <span class="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {{ loan.loanType }}
+                        </span>
+                      }
                     </div>
                   </div>
                 </td>
@@ -275,7 +287,7 @@ const severityStyles = {
   styles: []
 })
 export class LoanTableComponent {
-  @Input() loans: Loan[] = [];
+  loans = input<Loan[]>([]);
   @Output() loanClick = new EventEmitter<string>();
 
   sortField = signal<SortField>('riskScore');
@@ -287,7 +299,7 @@ export class LoanTableComponent {
   severityStyles = severityStyles;
 
   sortedLoans = computed(() => {
-    const loans = [...this.loans];
+    const loans = [...this.loans()];
     const field = this.sortField();
     const direction = this.sortDirection();
 

@@ -52,30 +52,28 @@ export interface RedFlagQuestion {
           <h4 class="text-base font-medium text-foreground">{{ question.question }}</h4>
         </button>
         <div class="flex items-center gap-4">
-          <!-- Response Display (Read-only) -->
-          <div [class]="cn(
-            'flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5',
-            question.response === 'Yes' 
-              ? 'text-pass' 
-              : question.response === 'No' 
-                ? 'text-fail' 
-                : 'text-muted-foreground'
-          )">
-            @if (question.response === 'Yes') {
-              <svg class="h-4 w-4 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            } @else if (question.response === 'No') {
-              <svg class="h-4 w-4 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            } @else {
-              <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"></path>
-              </svg>
-            }
-            <span class="text-sm font-medium">{{ question.response }}</span>
-          </div>
+          <!-- Response Display (Read-only) - only show for Yes/No -->
+          @if (question.response !== 'N/A') {
+            <div [class]="cn(
+              'flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5',
+              question.response === 'Yes' 
+                ? 'text-pass' 
+                : question.response === 'No' 
+                  ? 'text-fail' 
+                  : 'text-muted-foreground'
+            )">
+              @if (question.response === 'Yes') {
+                <svg class="h-4 w-4 text-pass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              } @else if (question.response === 'No') {
+                <svg class="h-4 w-4 text-fail" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              }
+              <span class="text-sm font-medium">{{ question.response }}</span>
+            </div>
+          }
           <!-- Comment Icon -->
           <button
             type="button"

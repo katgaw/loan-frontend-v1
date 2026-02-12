@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { loansData } from '../../../lib/loan-data';
+import { loansData, Loan } from '../../../lib/loan-data';
 
 function formatCurrency(value: number): string {
   if (value >= 1000000000) {
@@ -9,7 +9,10 @@ function formatCurrency(value: number): string {
   if (value >= 1000000) {
     return `$${(value / 1000000).toFixed(1)}M`;
   }
-  return `$${(value / 1000).toFixed(0)}K`;
+  if (value >= 1000) {
+    return `$${(value / 1000).toFixed(0)}K`;
+  }
+  return `$${value.toLocaleString()}`;
 }
 
 @Component({
@@ -85,7 +88,7 @@ function formatCurrency(value: number): string {
   styles: []
 })
 export class PortfolioSummaryComponent {
-  loans = loansData;
+  @Input() loans: Loan[] = loansData;
   formatCurrency = formatCurrency;
 
   get totalUpb(): number {
@@ -99,13 +102,8 @@ export class PortfolioSummaryComponent {
   }
 
   get percentageFailed(): number {
-    const totalPassed = this.loans.reduce((acc, loan) => acc + loan.complianceScoreData.passed, 0);
-    const totalRules = this.loans.reduce((acc, loan) => acc + loan.complianceScoreData.total, 0);
-    const totalFailed = this.loans.reduce(
-      (acc, loan) => acc + Math.max(0, loan.complianceScoreData.total - loan.complianceScoreData.passed),
-      0
-    );
-    return totalRules > 0 ? Math.round((totalFailed / totalRules) * 100) : 0;
+    // Percentage failed is simply the complement of percentage compliant
+    return 100 - this.percentageCompliant;
   }
 
   get criticalLoans(): number {

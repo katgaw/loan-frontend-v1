@@ -32,9 +32,17 @@ export interface TestJsonRuleResultsSummary {
   [key: string]: unknown;
 }
 
+export interface TestJsonRuleDetail {
+  rule_id?: string;
+  description?: string;
+  result?: string;
+  [key: string]: unknown;
+}
+
 export interface TestJsonRuleResultsSection {
   ruleId?: TestJsonRuleResultsRule[];
   rules?: TestJsonRuleResultsRule[];
+  rule_details?: TestJsonRuleDetail[];
   summary?: TestJsonRuleResultsSummary;
   [key: string]: unknown;
 }
@@ -136,13 +144,6 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
         if (!isRecord(ruleTypeValue)) continue;
         const ruleTypeSection = ruleTypeValue as TestJsonRuleResultsSection;
         
-        // Get rules from this rule_type_section
-        const ruleList = (Array.isArray(ruleTypeSection.ruleId) 
-          ? ruleTypeSection.ruleId 
-          : Array.isArray(ruleTypeSection.rules) 
-            ? ruleTypeSection.rules 
-            : []) as TestJsonRuleResultsRule[];
-        
         // Get summary from this rule_type_section
         const summary = isRecord(ruleTypeSection.summary) 
           ? (ruleTypeSection.summary as TestJsonRuleResultsSummary) 
@@ -156,19 +157,46 @@ export function buildRuleCategoriesBySectionFromTestJson(raw: unknown): Record<s
             : normalizeRuleTypeName(ruleTypeKey);
         
         const rules: UiRule[] = [];
-        for (const r of ruleList) {
-          if (!isRecord(r)) continue;
-          const rr = r as TestJsonRuleResultsRule;
-          const status = normalizeStatus(rr.rule_conformity);
-          const uiRule: UiRule = {
-            ruleId: normalizeRuleId(rr),
-            name: (typeof rr.textual_rule === "string" && rr.textual_rule.trim()) ? rr.textual_rule : "Untitled Rule",
-            description: (typeof rr.rule_outcome === "string" && rr.rule_outcome.trim()) ? rr.rule_outcome : "No rule outcome provided.",
-            status,
-            riskScore: statusToRiskScore(status),
-            subrules: [],
-          };
-          rules.push(uiRule);
+
+        // Prefer rule_details as the source for rules (rule_id, description, result)
+        const ruleDetailsList = Array.isArray(ruleTypeSection['rule_details']) ? ruleTypeSection['rule_details'] as TestJsonRuleDetail[] : [];
+        
+        if (ruleDetailsList.length > 0) {
+          for (const rd of ruleDetailsList) {
+            if (!isRecord(rd)) continue;
+            const status = normalizeStatus(rd.result);
+            const uiRule: UiRule = {
+              ruleId: typeof rd.rule_id === 'string' && rd.rule_id.trim() ? rd.rule_id : undefined,
+              name: (typeof rd.description === 'string' && rd.description.trim()) ? rd.description : 'Untitled Rule',
+              description: (typeof rd.description === 'string' && rd.description.trim()) ? rd.description : 'No rule outcome provided.',
+              status,
+              riskScore: statusToRiskScore(status),
+              subrules: [],
+            };
+            rules.push(uiRule);
+          }
+        } else {
+          // Fallback to rules[] / ruleId[] for backward compatibility
+          const ruleList = (Array.isArray(ruleTypeSection.ruleId) 
+            ? ruleTypeSection.ruleId 
+            : Array.isArray(ruleTypeSection.rules) 
+              ? ruleTypeSection.rules 
+              : []) as TestJsonRuleResultsRule[];
+
+          for (const r of ruleList) {
+            if (!isRecord(r)) continue;
+            const rr = r as TestJsonRuleResultsRule;
+            const status = normalizeStatus(rr.rule_conformity);
+            const uiRule: UiRule = {
+              ruleId: normalizeRuleId(rr),
+              name: (typeof rr.textual_rule === "string" && rr.textual_rule.trim()) ? rr.textual_rule : "Untitled Rule",
+              description: (typeof rr.rule_outcome === "string" && rr.rule_outcome.trim()) ? rr.rule_outcome : "No rule outcome provided.",
+              status,
+              riskScore: statusToRiskScore(status),
+              subrules: [],
+            };
+            rules.push(uiRule);
+          }
         }
         
         const insightObservations = summary?.fact_pattern_summary ? [summary.fact_pattern_summary] : [];

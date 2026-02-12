@@ -81,6 +81,16 @@ function extractFromLoanSummary(data: unknown): {
   return result;
 }
 
+function extractKeyRiskAreas(data: unknown): string[] | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const riskInsights = (data as Record<string, unknown>)["risk_insights"];
+  if (!riskInsights || typeof riskInsights !== "object") return undefined;
+  const areas = (riskInsights as Record<string, unknown>)["key_risk_areas"];
+  if (!Array.isArray(areas) || areas.length === 0) return undefined;
+  const strings = areas.filter((a): a is string => typeof a === "string" && a.trim() !== "");
+  return strings.length > 0 ? strings : undefined;
+}
+
 export function LoanListPage({ onNavigateToDetail }: LoanListPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [riskScoreFilter, setRiskScoreFilter] = useState("all");
@@ -105,6 +115,9 @@ export function LoanListPage({ onNavigateToDetail }: LoanListPageProps) {
         if (!isMounted) return;
         const ltv = extractLTVFromFacts(data);
         const { tlrStatus, dscr, upb } = extractFromLoanSummary(data);
+
+        // Extract key_risk_areas from risk_insights
+        const keyRiskAreas = extractKeyRiskAreas(data);
         
         setLoansWithLTV((prevLoans) =>
           prevLoans.map((loan) => ({
@@ -113,6 +126,7 @@ export function LoanListPage({ onNavigateToDetail }: LoanListPageProps) {
             ...(tlrStatus !== undefined && { tlrStatus }),
             ...(dscr !== undefined ? { dscr } : { dscr: undefined }),
             ...(upb !== undefined && { upb }),
+            ...(keyRiskAreas !== undefined && { keyRiskAreas }),
           }))
         );
       })
