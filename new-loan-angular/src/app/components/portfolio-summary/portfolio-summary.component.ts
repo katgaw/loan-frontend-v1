@@ -37,7 +37,7 @@ function formatCurrency(value: number): string {
           <div>
             <p class="text-base text-muted-foreground">Total UPB</p>
             <p class="text-3xl font-bold text-foreground">
-              $0
+              {{ formatCurrency(totalUpb) }}
             </p>
           </div>
         </div>
@@ -55,10 +55,10 @@ function formatCurrency(value: number): string {
           <div>
             <p class="text-base text-muted-foreground">Percentage of Rules Compliant</p>
             <p class="text-3xl font-bold text-foreground">
-              75%
+              {{ percentageCompliant }}%
             </p>
             <p class="text-sm text-muted-foreground">
-              25% failed
+              {{ percentageFailed }}% failed
             </p>
           </div>
         </div>

@@ -81,7 +81,7 @@
         "summary": {
             "fact_pattern_summary": "Fact pattern summary",
             "lender_justification_assessment": "Lender justification summary",
-            "compliance_finding": "compliant",
+            "compliance_finding": "non-compliant",
             "compliance_rationale": "Compliance rationale summary",
             "calibration": [
                 {
@@ -195,18 +195,18 @@
     "loan_id":"1",
     "borrower":"",
     "property_name": "Artisan Residential",
-    "property_type":"Multifamily",
-    "loan_amount":"50,500,000",
+    "property_type":"Multifamily1",
+    "loan_amount":"51,500,000",
     "acquisition_date":"",
     "commitment_date":"",
     "maturity_date":"",
-    "lender":"",
-    "upb":"50",
-    "product_type":"refinance",
-    "units":"200",
-    "city":"Bentonville",
-    "state":"VA",
-    "risk_score":"1",
+    "lender":"Greystone1",
+    "upb":"30",
+    "product_type":"refinance1",
+    "units":"250",
+    "city":"Walterboro",
+    "state":"SC",
+    "risk_score":"3",
     "status":"unknown",
     "DSCR":"",
     "LTV":""
@@ -214,7 +214,7 @@
 
 "risk_insights": {
     "summary_narrative": "Summary narrative",
-    "key_risk_areas": ["Key risk areas: this sucks","Key risk areas 2: this also sucks"],
+    "key_risk_areas": ["Key risk areas1: this sucks","Key risk areas 2: this also sucks"],
     "suggestions": ["Suggestion 1","Suggestion 2"],
     "strengths": ["Strength 1","Strength 2"],
     "weaknesses": ["Weakness 1","Weakness 2"]
