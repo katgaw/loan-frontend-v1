@@ -11,6 +11,7 @@ export class ApiService {
   getTestJson(): Observable<any> {
     // Read test_new.json from assets directory.
     // Add a cache-busting query param so edits to the JSON are reflected immediately.
-    return this.http.get<any>(`/assets/test_new.json?v=${Date.now()}`);
+    // Use a *relative* URL so this still works when the app is served from a sub-path.
+    return this.http.get<any>(`assets/test_new.json?v=${Date.now()}`);
   }
 }
