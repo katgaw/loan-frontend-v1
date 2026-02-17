@@ -216,11 +216,21 @@ export class LoanListPageComponent implements OnInit {
           (valuationKey ? ruleCategoriesBySection[valuationKey] : []) ?? []
         );
         
+        const currentLoans = this.loansWithLTV();
+        const hasMatchingLoanId =
+          loanId !== undefined &&
+          currentLoans.some((loan) => String(loan.id) === String(loanId));
+        // Which row should receive the JSON overrides?
+        // - If JSON loan_id matches an existing row id => update that row only.
+        // - Otherwise (common when swapping in a JSON file from another machine) => update the first row.
+        const targetLoanId = hasMatchingLoanId
+          ? String(loanId)
+          : currentLoans[0]?.id;
+
         this.loansWithLTV.set(
-          this.loansWithLTV().map((loan) => {
-            // Only apply overrides to the matching loan when we have an id from JSON.
-            // This prevents one `test_new.json` payload from overwriting every row.
-            if (loanId && String(loan.id) !== String(loanId)) return loan;
+          currentLoans.map((loan) => {
+            // Apply overrides to a single “target” row (see `targetLoanId` above).
+            if (targetLoanId && String(loan.id) !== String(targetLoanId)) return loan;
 
             return {
               ...loan,
