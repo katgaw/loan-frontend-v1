@@ -511,7 +511,7 @@ function pickLoanSummaryScores(
                       <div class="rounded-lg border border-border bg-card overflow-hidden">
                         <!-- Category Header (always full width; never squished by Insight/Comparison) -->
                         <div
-                          class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 cursor-pointer select-none transition-colors hover:bg-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          class="grid w-full grid-cols-[1fr_auto] items-center gap-4 px-5 py-4 cursor-pointer select-none transition-colors hover:bg-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/40"
                           role="button"
                           tabindex="0"
                           [attr.aria-expanded]="isCategoryExpanded(category.name)"
@@ -519,7 +519,7 @@ function pickLoanSummaryScores(
                           (keydown.enter)="toggleCategory(category.name)"
                           (keydown.space)="toggleCategory(category.name); $event.preventDefault()"
                         >
-                          <div class="flex min-w-0 items-center gap-3">
+                          <div class="flex min-w-0 items-center gap-2.5">
                             <svg
                               [class]="cn(
                                 'h-5 w-5 shrink-0 text-muted-foreground transition-transform',
@@ -532,21 +532,20 @@ function pickLoanSummaryScores(
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                             <h3 class="truncate text-xl font-bold text-foreground">{{ category.name }}</h3>
-                          </div>
-                          <div class="flex items-center justify-end gap-2">
                             <span [class]="cn(
-                              'rounded-md px-3 py-1.5 text-sm font-semibold w-16 text-center',
+                              'rounded px-2 py-0.5 text-xs font-bold uppercase text-white',
                               getCategoryStatus(category) === 'PASS'
-                                ? 'bg-pass/10 text-pass border border-pass/30'
-                                : 'bg-fail/10 text-fail border border-fail/30'
+                                ? 'bg-pass'
+                                : 'bg-fail'
                             )">
                               {{ getCategoryStatus(category) }}
                             </span>
                             @let finding = getCategoryComplianceFindingDisplay(category);
                             @if (finding) {
-                              <span
-                                [class]="getCategoryComplianceFindingBadgeClass(category)"
-                              >
+                              <span [class]="cn(
+                                'rounded px-2 py-0.5 text-xs font-bold text-white',
+                                category.complianceFinding === 'compliant' ? 'bg-pass' : category.complianceFinding === 'non-compliant' ? 'bg-fail' : 'bg-muted-foreground'
+                              )">
                                 {{ finding }}
                               </span>
                             }
@@ -595,13 +594,11 @@ function pickLoanSummaryScores(
                             <div [class]="cn(
                               'grid gap-4 items-start',
                               (isInsightOpen(category.name) || isComparisonOpen(category.name))
-                                ? (isCategoryExpanded(category.name)
-                                    ? 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]'
-                                    : 'grid-cols-1')
+                                ? 'grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'
                                 : 'grid-cols-1'
                             )">
-                              <!-- Left column (rules) -->
-                              @if (isCategoryExpanded(category.name)) {
+                              <!-- Left column (rules) - always shown when insight/comparison is open -->
+                              @if (isCategoryExpanded(category.name) || isInsightOpen(category.name) || isComparisonOpen(category.name)) {
                                 <div class="min-w-0 space-y-2">
                                     @for (rule of category.rules; track rule.name) {
                                       <div [class]="cn(
@@ -1271,7 +1268,7 @@ export class LoanDetailComponent implements OnInit {
 
   getCategoryComplianceFindingDisplay(category: RuleCategory): string | null {
     if (category.complianceFinding === "compliant") return "Compliant";
-    if (category.complianceFinding === "non-compliant") return "Noncompliant";
+    if (category.complianceFinding === "non-compliant") return "Non-compliant";
     if (category.complianceFinding === "n/a") return "N/A";
     return null;
   }

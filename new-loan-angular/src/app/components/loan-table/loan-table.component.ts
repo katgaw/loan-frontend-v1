@@ -38,7 +38,7 @@ const statusStyles = {
 };
 
 const severityStyles = {
-  Critical: 'bg-critical/10 text-critical border border-critical/30',
+  Critical: 'bg-fail text-white uppercase border border-fail',
   High: 'bg-high/10 text-high border border-high/30',
   Medium: 'bg-medium/10 text-medium border border-medium/30',
   Low: 'bg-low/10 text-low border border-low/30',
@@ -256,10 +256,12 @@ const severityStyles = {
 
                 <!-- Risk Summary -->
                 <td class="px-4 py-4 align-top">
-                  <div class="flex flex-col gap-2">
-                    <span [class]="cn('w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold', severityStyles[loan.severity])">
-                      {{ loan.severity }}
-                    </span>
+                  <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-end">
+                      <span [class]="cn('rounded px-1.5 py-px text-[10px] font-bold leading-tight', severityStyles[loan.severity])">
+                        {{ loan.severity }}
+                      </span>
+                    </div>
                     <div class="flex flex-col gap-1">
                       @for (riskArea of loan.keyRiskAreas.slice(0, 2); track riskArea) {
                         <span class="flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">

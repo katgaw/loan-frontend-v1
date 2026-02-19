@@ -184,7 +184,7 @@
     }
     },
     "rule_outcomes": "15/33 rules passed."
-},
+    },
     "Valuation": {
         "rule_type_sections": {},
         "rule_outcomes":""
@@ -192,7 +192,7 @@
 },
 
 "loan_summary":{
-    "loan_id":"1",
+    "loan_id":"144422",
     "borrower":"",
     "property_name": "Artisan Residential",
     "property_type":"Multifamily1",
