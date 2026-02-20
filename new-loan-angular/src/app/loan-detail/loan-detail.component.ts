@@ -543,7 +543,7 @@ function pickLoanSummaryScores(
                             @let finding = getCategoryComplianceFindingDisplay(category);
                             @if (finding) {
                               <span [class]="cn(
-                                'rounded px-2 py-0.5 text-xs font-bold text-white',
+                                'rounded px-2 py-0.5 text-xs font-bold uppercase text-white',
                                 category.complianceFinding === 'compliant' ? 'bg-pass' : category.complianceFinding === 'non-compliant' ? 'bg-fail' : 'bg-muted-foreground'
                               )">
                                 {{ finding }}
