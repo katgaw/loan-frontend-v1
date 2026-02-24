@@ -508,7 +508,7 @@ function pickLoanSummaryScores(
                 @if (getCurrentRules().length > 0) {
                   <div class="space-y-4">
                     @for (category of getCurrentRules(); track category.name) {
-                      <div class="rounded-lg border border-border bg-card overflow-hidden">
+                      <div class="rounded-lg border border-border bg-card">
                         <!-- Category Header (always full width; never squished by Insight/Comparison) -->
                         <div
                           class="grid w-full grid-cols-[1fr_auto] items-center gap-4 px-5 py-4 cursor-pointer select-none transition-colors hover:bg-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/40"
@@ -542,11 +542,33 @@ function pickLoanSummaryScores(
                             </span>
                             @let finding = getCategoryComplianceFindingDisplay(category);
                             @if (finding) {
-                              <span [class]="cn(
-                                'rounded px-2 py-0.5 text-xs font-bold uppercase text-white',
-                                category.complianceFinding === 'compliant' ? 'bg-pass' : category.complianceFinding === 'non-compliant' ? 'bg-fail' : 'bg-muted-foreground'
-                              )">
-                                {{ finding }}
+                              <span class="inline-flex items-center gap-1">
+                                <span [class]="cn(
+                                  'rounded px-2 py-0.5 text-xs font-bold uppercase text-white',
+                                  category.complianceFinding === 'compliant' ? 'bg-pass' : category.complianceFinding === 'non-compliant' ? 'bg-fail' : 'bg-muted-foreground'
+                                )">
+                                  {{ finding }}
+                                </span>
+                                <span class="relative group/info" (click)="$event.stopPropagation()">
+                                  <svg class="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"></path>
+                                  </svg>
+                                  <div class="pointer-events-none absolute left-1/2 top-full z-[9999] mt-2 w-[540px] -translate-x-1/2 rounded-xl border border-border bg-white px-6 py-5 text-sm font-normal normal-case text-foreground shadow-xl opacity-0 transition-opacity group-hover/info:opacity-100 group-hover/info:pointer-events-auto">
+                                    <div class="grid grid-cols-2 gap-6">
+                                      <div>
+                                        <h5 class="mb-2 font-bold text-foreground">Pass/Fail</h5>
+                                        <div class="mb-3 h-px bg-border"></div>
+                                        <p class="leading-relaxed text-foreground/80">Pass/Fail results are determined by predefined business rules applied to loan delivery data, without considering waivers, lender support, or similar factors.</p>
+                                      </div>
+                                      <div>
+                                        <h5 class="mb-2 font-bold text-foreground">Compliant/Non-Compliant</h5>
+                                        <div class="mb-3 h-px bg-border"></div>
+                                        <p class="leading-relaxed text-foreground/80">Compliant/Non-Compliant results incorporate the Pass/Fail outcome plus an AI-assisted review of waivers and lender support to assess overall compliance.</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </span>
                               </span>
                             }
                           </div>
