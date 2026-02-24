@@ -186,8 +186,291 @@
     "rule_outcomes": "15/33 rules passed."
 },
     "Valuation": {
-        "rule_type_sections": {},
-        "rule_outcomes":""
+        "rule_type_sections": {
+            "appraisal_review": {
+                "rule_type_id": "appraisal_review",
+                "rule_type_name": "Appraisal Review",
+                "rules": [
+                    {
+                        "ruleId": "appraisal_review_000",
+                        "textual_rule": "Appraisal report is dated within 12 months of the commitment date",
+                        "rule_outcome": "Appraisal report is dated within 12 months of the commitment date",
+                        "rule_conformity": "PASS"
+                    },
+                    {
+                        "ruleId": "appraisal_review_001",
+                        "textual_rule": "Appraised value supports the loan-to-value ratio within acceptable thresholds",
+                        "rule_outcome": "Appraised value supports the loan-to-value ratio within acceptable thresholds",
+                        "rule_conformity": "FAIL"
+                    },
+                    {
+                        "ruleId": "appraisal_review_002",
+                        "textual_rule": "Appraisal was performed by a state-certified appraiser with appropriate credentials",
+                        "rule_outcome": "Appraisal was performed by a state-certified appraiser with appropriate credentials",
+                        "rule_conformity": "PASS"
+                    },
+                    {
+                        "ruleId": "appraisal_review_003",
+                        "textual_rule": "Comparable sales used in the appraisal are within a reasonable geographic proximity",
+                        "rule_outcome": "Comparable sales used in the appraisal are within a reasonable geographic proximity",
+                        "rule_conformity": "FAIL"
+                    }
+                ],
+                "rule_details": [
+                    {
+                        "rule_id": "appraisal_review_000",
+                        "description": "Appraisal report is dated within 12 months of the commitment date",
+                        "result": "PASS"
+                    },
+                    {
+                        "rule_id": "appraisal_review_001",
+                        "description": "Appraised value supports the loan-to-value ratio within acceptable thresholds",
+                        "result": "FAIL"
+                    },
+                    {
+                        "rule_id": "appraisal_review_002",
+                        "description": "Appraisal was performed by a state-certified appraiser with appropriate credentials",
+                        "result": "PASS"
+                    },
+                    {
+                        "rule_id": "appraisal_review_003",
+                        "description": "Comparable sales used in the appraisal are within a reasonable geographic proximity",
+                        "result": "FAIL"
+                    }
+                ],
+                "comparisons": [
+                    {
+                        "question": "Is the appraisal report dated within 12 months of the commitment date?",
+                        "answer": "Yes"
+                    },
+                    {
+                        "question": "Does the appraised value support the LTV ratio within acceptable thresholds?",
+                        "answer": "No"
+                    },
+                    {
+                        "question": "Was the appraisal performed by a state-certified appraiser?",
+                        "answer": "\u2022 Lender Yes \\n\u2022 AI Yes"
+                    },
+                    {
+                        "question": "Are the comparable sales within a reasonable geographic proximity?",
+                        "answer": "No"
+                    }
+                ],
+                "followup_assessment": [
+                    {
+                        "question": "Does the appraised value support the LTV ratio within acceptable thresholds?",
+                        "facts": [
+                            "appraised value of $52,000,000",
+                            "loan amount of $51,500,000",
+                            "LTV ratio of 99.04%"
+                        ],
+                        "ai_observation": "The LTV ratio of 99.04% exceeds the maximum allowable threshold of 80%, indicating insufficient equity cushion"
+                    },
+                    {
+                        "question": "Are the comparable sales within a reasonable geographic proximity?",
+                        "facts": [
+                            "comparable sale 1 located 15 miles away",
+                            "comparable sale 2 located 22 miles away",
+                            "subject property in Walterboro, SC"
+                        ],
+                        "ai_observation": "Two of three comparable sales are located more than 10 miles from the subject property, which may not reflect local market conditions"
+                    }
+                ],
+                "summary": {
+                    "fact_pattern_summary": "The appraisal report dated January 2026 values the property at $52,000,000. The appraiser used three comparable sales, two of which are located outside the immediate market area. The resulting LTV of 99.04% significantly exceeds standard thresholds.",
+                    "lender_justification_assessment": "The lender justified the elevated LTV by citing strong rental demand in the Walterboro submarket and recent capital improvements totaling $2.1M. However, no waiver was provided for the LTV exception.",
+                    "compliance_finding": "non-compliant",
+                    "compliance_rationale": "The appraisal supports the property value but the LTV ratio exceeds the maximum threshold without an approved waiver. Comparable selection raises concerns about geographic relevance.",
+                    "calibration": [
+                        {
+                            "property_name": "Artisan Residential",
+                            "commitment_date": "2026-01-01",
+                            "issue_type": "Appraisal Review",
+                            "relevance_explanation": "The appraisal valuation directly impacts loan sizing and risk assessment",
+                            "compliance_rationale": "LTV exceeds threshold; comparable sales selection is geographically questionable"
+                        }
+                    ]
+                }
+            },
+            "market_analysis": {
+                "rule_type_id": "market_analysis",
+                "rule_type_name": "Market Analysis",
+                "rules": [
+                    {
+                        "ruleId": "market_analysis_000",
+                        "textual_rule": "Market vacancy rate is within acceptable range for the property type and location",
+                        "rule_outcome": "Market vacancy rate is within acceptable range for the property type and location",
+                        "rule_conformity": "PASS"
+                    },
+                    {
+                        "ruleId": "market_analysis_001",
+                        "textual_rule": "Market rent assumptions are supported by comparable rental data",
+                        "rule_outcome": "Market rent assumptions are supported by comparable rental data",
+                        "rule_conformity": "PASS"
+                    },
+                    {
+                        "ruleId": "market_analysis_002",
+                        "textual_rule": "Supply pipeline does not pose a material risk to occupancy or rental rates",
+                        "rule_outcome": "Supply pipeline does not pose a material risk to occupancy or rental rates",
+                        "rule_conformity": "PASS"
+                    }
+                ],
+                "rule_details": [
+                    {
+                        "rule_id": "market_analysis_000",
+                        "description": "Market vacancy rate is within acceptable range for the property type and location",
+                        "result": "PASS"
+                    },
+                    {
+                        "rule_id": "market_analysis_001",
+                        "description": "Market rent assumptions are supported by comparable rental data",
+                        "result": "PASS"
+                    },
+                    {
+                        "rule_id": "market_analysis_002",
+                        "description": "Supply pipeline does not pose a material risk to occupancy or rental rates",
+                        "result": "PASS"
+                    }
+                ],
+                "comparisons": [
+                    {
+                        "question": "Is the market vacancy rate within acceptable range?",
+                        "answer": "Yes"
+                    },
+                    {
+                        "question": "Are market rent assumptions supported by comparable rental data?",
+                        "answer": "\u2022 Lender Yes \\n\u2022 AI Yes"
+                    },
+                    {
+                        "question": "Does the supply pipeline pose a material risk to occupancy or rental rates?",
+                        "answer": "No"
+                    }
+                ],
+                "followup_assessment": [
+                    {
+                        "question": "Is the market vacancy rate within acceptable range?",
+                        "facts": [
+                            "submarket vacancy rate of 4.8%",
+                            "property vacancy rate of 3.2%",
+                            "acceptable threshold of 10%"
+                        ],
+                        "ai_observation": "Both the submarket and property-level vacancy rates are well within the acceptable threshold, indicating stable demand"
+                    }
+                ],
+                "summary": {
+                    "fact_pattern_summary": "The Walterboro multifamily submarket shows a vacancy rate of 4.8%, below the 10% threshold. Average market rents of $1,250/unit align with the underwritten rent of $1,180/unit. No significant new supply is expected within a 3-mile radius over the next 18 months.",
+                    "lender_justification_assessment": "The lender's market analysis is consistent with third-party data sources and supports the underwriting assumptions for occupancy and rental income growth.",
+                    "compliance_finding": "compliant",
+                    "compliance_rationale": "All market analysis rules pass. Market conditions support the underwriting assumptions with adequate demand drivers and limited new supply risk.",
+                    "calibration": [
+                        {
+                            "property_name": "Artisan Residential",
+                            "commitment_date": "2026-01-01",
+                            "issue_type": "Market Analysis",
+                            "relevance_explanation": "Market conditions directly impact projected income and property value stability",
+                            "compliance_rationale": "Market fundamentals are strong and support the valuation"
+                        }
+                    ]
+                }
+            },
+            "property_condition": {
+                "rule_type_id": "property_condition",
+                "rule_type_name": "Property Condition",
+                "rules": [
+                    {
+                        "ruleId": "property_condition_000",
+                        "textual_rule": "Property condition assessment report is current and completed by a qualified engineer",
+                        "rule_outcome": "Property condition assessment report is current and completed by a qualified engineer",
+                        "rule_conformity": "PASS"
+                    },
+                    {
+                        "ruleId": "property_condition_001",
+                        "textual_rule": "Immediate repair costs do not exceed the maximum allowable threshold",
+                        "rule_outcome": "Immediate repair costs do not exceed the maximum allowable threshold",
+                        "rule_conformity": "FAIL"
+                    },
+                    {
+                        "ruleId": "property_condition_002",
+                        "textual_rule": "Replacement reserve escrow is adequate to cover projected capital expenditures",
+                        "rule_outcome": "Replacement reserve escrow is adequate to cover projected capital expenditures",
+                        "rule_conformity": "PASS"
+                    },
+                    {
+                        "ruleId": "property_condition_003",
+                        "textual_rule": "No deferred maintenance items classified as critical or life-safety hazards",
+                        "rule_outcome": "No deferred maintenance items classified as critical or life-safety hazards",
+                        "rule_conformity": "N/A"
+                    }
+                ],
+                "rule_details": [
+                    {
+                        "rule_id": "property_condition_000",
+                        "description": "Property condition assessment report is current and completed by a qualified engineer",
+                        "result": "PASS"
+                    },
+                    {
+                        "rule_id": "property_condition_001",
+                        "description": "Immediate repair costs do not exceed the maximum allowable threshold",
+                        "result": "FAIL"
+                    },
+                    {
+                        "rule_id": "property_condition_002",
+                        "description": "Replacement reserve escrow is adequate to cover projected capital expenditures",
+                        "result": "PASS"
+                    },
+                    {
+                        "rule_id": "property_condition_003",
+                        "description": "No deferred maintenance items classified as critical or life-safety hazards",
+                        "result": "N/A"
+                    }
+                ],
+                "comparisons": [
+                    {
+                        "question": "Is the property condition assessment current and completed by a qualified engineer?",
+                        "answer": "Yes"
+                    },
+                    {
+                        "question": "Do immediate repair costs exceed the maximum allowable threshold?",
+                        "answer": "Yes"
+                    },
+                    {
+                        "question": "Is the replacement reserve escrow adequate for projected capital expenditures?",
+                        "answer": "\u2022 Lender Yes \\n\u2022 AI Yes"
+                    },
+                    {
+                        "question": "Are there deferred maintenance items classified as critical or life-safety hazards?",
+                        "answer": "N/A"
+                    }
+                ],
+                "followup_assessment": [
+                    {
+                        "question": "Do immediate repair costs exceed the maximum allowable threshold?",
+                        "facts": [
+                            "immediate repair estimate of $385,000",
+                            "maximum allowable threshold of $250,000",
+                            "primary items: HVAC replacement ($210,000), roof repairs ($175,000)"
+                        ],
+                        "ai_observation": "Immediate repair costs of $385,000 exceed the $250,000 threshold by 54%. The lender has established a repair escrow but did not obtain a waiver for the overage."
+                    }
+                ],
+                "summary": {
+                    "fact_pattern_summary": "The PCA report dated December 2025 identifies $385,000 in immediate repairs, primarily HVAC replacement and roof work. The 12-year capital expenditure projection totals $1.8M. Replacement reserves are funded at $300/unit/year.",
+                    "lender_justification_assessment": "The lender established a repair escrow of $400,000 to address immediate needs and argues the reserve funding at $300/unit/year is adequate based on the property's recent $2.1M renovation. No formal waiver was obtained for the repair cost overage.",
+                    "compliance_finding": "non-compliant",
+                    "compliance_rationale": "While the replacement reserve escrow is adequately funded, immediate repair costs exceed the allowable threshold without an approved waiver. The repair escrow partially mitigates risk but does not satisfy the compliance requirement.",
+                    "calibration": [
+                        {
+                            "property_name": "Artisan Residential",
+                            "commitment_date": "2026-01-01",
+                            "issue_type": "Property Condition",
+                            "relevance_explanation": "Property condition directly impacts asset preservation and collateral risk",
+                            "compliance_rationale": "Immediate repairs exceed threshold; waiver not obtained despite escrow mitigation"
+                        }
+                    ]
+                }
+            }
+        },
+        "rule_outcomes": "6/11 rules passed."
     }
 },
 
