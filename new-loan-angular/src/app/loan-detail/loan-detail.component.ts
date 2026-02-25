@@ -222,7 +222,21 @@ function pickLoanSummaryScores(
                 <p class="mt-1 text-base font-bold text-foreground">{{ loan.borrower.trim() ? loan.borrower : '—' }}</p>
               </div>
               <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compliance Score</p>
+                <div class="flex items-center gap-1">
+                  <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compliance Score</p>
+                  <span class="relative group/compliance-score">
+                    <button
+                      type="button"
+                      class="flex h-4 w-4 items-center justify-center rounded-full border border-border bg-muted/40 text-[10px] font-bold text-muted-foreground cursor-help leading-none"
+                      aria-label="About compliance score"
+                    >
+                      i
+                    </button>
+                    <div class="pointer-events-none absolute left-1/2 top-full z-[9999] mt-2 w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-border bg-white px-5 py-4 text-left text-sm font-normal normal-case leading-relaxed text-foreground shadow-xl opacity-0 transition-opacity group-hover/compliance-score:opacity-100 group-hover/compliance-score:pointer-events-auto group-focus-within/compliance-score:opacity-100 group-focus-within/compliance-score:pointer-events-auto">
+                      Compliance score: represents how many rules the loan meets. Calculated as the number of compliant rules out of the total rules that apply to the loan.
+                    </div>
+                  </span>
+                </div>
                 <div class="mt-1 flex items-center gap-2">
                   <p class="text-base font-bold text-foreground">{{ getOverallCompliancePassed() }}/{{ getOverallComplianceTotal() }}</p>
                   <div class="flex gap-1">
@@ -264,7 +278,21 @@ function pickLoanSummaryScores(
                 <p class="mt-1 text-base font-bold text-foreground">{{ loan.units }}</p>
               </div>
               <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk Score</p>
+                <div class="flex items-center gap-1">
+                  <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk Score</p>
+                  <span class="relative group/risk-score">
+                    <button
+                      type="button"
+                      class="flex h-4 w-4 items-center justify-center rounded-full border border-border bg-muted/40 text-[10px] font-bold text-muted-foreground cursor-help leading-none"
+                      aria-label="About risk score"
+                    >
+                      i
+                    </button>
+                    <div class="pointer-events-none absolute left-1/2 top-full z-[9999] mt-2 w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-border bg-white px-5 py-4 text-left text-sm font-normal normal-case leading-relaxed text-foreground shadow-xl opacity-0 transition-opacity group-hover/risk-score:opacity-100 group-hover/risk-score:pointer-events-auto group-focus-within/risk-score:opacity-100 group-focus-within/risk-score:pointer-events-auto">
+                      Risk score: evaluates how well the lender documented compliance with required guidelines and how effectively potential risks and mitigating factors were identified
+                    </div>
+                  </span>
+                </div>
                 <div class="mt-1 flex items-center gap-2">
                   <svg width="36" height="22" viewBox="0 0 36 22" class="flex-shrink-0">
                     <path
@@ -532,43 +560,35 @@ function pickLoanSummaryScores(
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                             <h3 class="truncate text-xl font-bold text-foreground">{{ category.name }}</h3>
-                            <span [class]="cn(
-                              'rounded px-2 py-0.5 text-xs font-bold uppercase text-white',
-                              getCategoryStatus(category) === 'PASS'
-                                ? 'bg-pass'
-                                : 'bg-fail'
-                            )">
-                              {{ getCategoryStatus(category) }}
+                            <span class="relative group/pass" (click)="$event.stopPropagation()">
+                              <span [class]="cn(
+                                'rounded px-2 py-0.5 text-xs font-bold uppercase text-white cursor-help',
+                                getCategoryStatus(category) === 'PASS'
+                                  ? 'bg-pass'
+                                  : 'bg-fail'
+                              )">
+                                {{ getCategoryStatus(category) }}
+                              </span>
+                              <div class="pointer-events-none absolute left-1/2 top-full z-[9999] mt-2 w-72 -translate-x-1/2 rounded-xl border border-border bg-white px-5 py-4 text-sm font-normal normal-case text-foreground shadow-xl opacity-0 transition-opacity group-hover/pass:opacity-100 group-hover/pass:pointer-events-auto">
+                                <h5 class="mb-2 font-bold text-foreground">Pass/Fail</h5>
+                                <div class="mb-3 h-px bg-border"></div>
+                                <p class="leading-relaxed text-foreground/80">Pass/Fail results are determined by predefined business rules applied to loan delivery data, without considering waivers, lender support, or similar factors.</p>
+                              </div>
                             </span>
                             @let finding = getCategoryComplianceFindingDisplay(category);
                             @if (finding) {
-                              <span class="inline-flex items-center gap-1">
+                              <span class="relative group/comp" (click)="$event.stopPropagation()">
                                 <span [class]="cn(
-                                  'rounded px-2 py-0.5 text-xs font-bold uppercase text-white',
+                                  'rounded px-2 py-0.5 text-xs font-bold uppercase text-white cursor-help',
                                   category.complianceFinding === 'compliant' ? 'bg-pass' : category.complianceFinding === 'non-compliant' ? 'bg-fail' : 'bg-muted-foreground'
                                 )">
                                   {{ finding }}
                                 </span>
-                                <span class="relative group/info" (click)="$event.stopPropagation()">
-                                  <svg class="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"></path>
-                                  </svg>
-                                  <div class="pointer-events-none absolute left-1/2 top-full z-[9999] mt-2 w-[540px] -translate-x-1/2 rounded-xl border border-border bg-white px-6 py-5 text-sm font-normal normal-case text-foreground shadow-xl opacity-0 transition-opacity group-hover/info:opacity-100 group-hover/info:pointer-events-auto">
-                                    <div class="grid grid-cols-2 gap-6">
-                                      <div>
-                                        <h5 class="mb-2 font-bold text-foreground">Pass/Fail</h5>
-                                        <div class="mb-3 h-px bg-border"></div>
-                                        <p class="leading-relaxed text-foreground/80">Pass/Fail results are determined by predefined business rules applied to loan delivery data, without considering waivers, lender support, or similar factors.</p>
-                                      </div>
-                                      <div>
-                                        <h5 class="mb-2 font-bold text-foreground">Compliant/Non-Compliant</h5>
-                                        <div class="mb-3 h-px bg-border"></div>
-                                        <p class="leading-relaxed text-foreground/80">Compliant/Non-Compliant results incorporate the Pass/Fail outcome plus an AI-assisted review of waivers and lender support to assess overall compliance.</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </span>
+                                <div class="pointer-events-none absolute left-1/2 top-full z-[9999] mt-2 w-72 -translate-x-1/2 rounded-xl border border-border bg-white px-5 py-4 text-sm font-normal normal-case text-foreground shadow-xl opacity-0 transition-opacity group-hover/comp:opacity-100 group-hover/comp:pointer-events-auto">
+                                  <h5 class="mb-2 font-bold text-foreground">Compliant/Non-Compliant</h5>
+                                  <div class="mb-3 h-px bg-border"></div>
+                                  <p class="leading-relaxed text-foreground/80">Compliant/Non-Compliant results incorporate the Pass/Fail outcome plus an AI-assisted review of waivers and lender support to assess overall compliance.</p>
+                                </div>
                               </span>
                             }
                           </div>
